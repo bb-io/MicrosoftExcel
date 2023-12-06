@@ -9,10 +9,7 @@ namespace Apps.MicrosoftExcel.Models.Requests
 {
     public class GetCellRequest
     {
-        [Display("Column address", Description = "Cell column address (e.g. \"A\", \"B\", \"C\")")]
-        public string Column { get; set; }
-
-        [Display("Row address", Description = "Cell row address (e.g. \"1\", \"2\", \"3\")")]
-        public string Row { get; set; }
+        [Display("Cell address", Description = "Cell address (e.g. \"A1\", \"B2\", \"C3\")")]
+        public string CellAddress { get; set; }
     }
 }
