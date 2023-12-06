@@ -1,4 +1,5 @@
 ﻿using System.Net.Mime;
+using System.Text;
 using Apps.MicrosoftExcel.DataSourceHandlers;
 using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
@@ -8,6 +9,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Newtonsoft.Json.Linq;
 using RestSharp;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.MicrosoftExcel.Actions;
@@ -27,7 +29,7 @@ public class WorksheetActions : BaseInvocable
     {
         var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.Column}{cellRequest.Row}')",
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var cellValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new CellDto(){ Value = cellValue.Values.First().First() };
@@ -42,7 +44,7 @@ public class WorksheetActions : BaseInvocable
     {
         var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.Column}{cellRequest.Row}')", 
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
         request.AddJsonBody(new
         {
@@ -112,5 +114,23 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowsDto() { Rows = rowValue.Values.ToList() };
+    }
+
+    [Action("Download CSV file", Description = "Download CSV file")]
+    public async Task<File> DownloadCSV(
+        [ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest)
+    {
+        var rows = await GetUsedRange(workbookRequest, worksheetRequest);
+        var csv = new StringBuilder();
+        rows.Rows.ForEach(row =>
+        {
+            csv.AppendLine(string.Join(",", row));
+        });
+        return new File(Encoding.ASCII.GetBytes(csv.ToString())) 
+        { 
+            ContentType = MediaTypeNames.Application.Octet, 
+            Name = "Table.csv"
+        };
     }
 }

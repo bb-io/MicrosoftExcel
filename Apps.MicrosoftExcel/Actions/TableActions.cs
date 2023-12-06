@@ -77,7 +77,7 @@ namespace Apps.MicrosoftExcel.Actions
                 Method.Post, InvocationContext.AuthenticationCredentialsProviders);
             request.AddJsonBody(new
             {
-                address = $"{createTableRequest.Column1}{createTableRequest.Row1}:{createTableRequest.Column2}{createTableRequest.Row2}",
+                address = $"{createTableRequest.ColumnRow1}:{createTableRequest.ColumnRow2}",
                 hasHeaders = createTableRequest.HasHeaders ?? true
             });
             return await client.ExecuteWithHandling<TableDto>(request);

@@ -9,7 +9,7 @@ namespace Apps.MicrosoftExcel.Models.Requests
 {
     public class GetTableRowRequest
     {
-        [Display("Row index")]
+        [Display("Row", Description = "Row number (e.g. \"1\", \"2\", \"3\")")]
         public string RowIndex { get; set; }
     }
 }
