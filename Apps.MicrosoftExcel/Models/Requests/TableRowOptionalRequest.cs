@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace Apps.MicrosoftExcel.Models.Requests
 {
-    public class GetTableRowRequest
+    public class TableRowOptionalRequest
     {
         [Display("Table row", Description = "Row number (e.g. \"1\", \"2\", \"3\")")]
-        public int RowIndex { get; set; }
+        public int? RowIndex { get; set; }
     }
 }
