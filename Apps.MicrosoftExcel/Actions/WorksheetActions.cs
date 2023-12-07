@@ -1,5 +1,6 @@
 ﻿using System.Net.Mime;
 using System.Text;
+using System.Xml.Linq;
 using Apps.MicrosoftExcel.DataSourceHandlers;
 using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
@@ -66,6 +67,25 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = rowValue.Values.First() };
+    }
+
+    [Action("Add new row", Description = "Add new row")]
+    public async Task<RowDto> AddRow(
+        [ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest,
+        [ActionParameter] GetRowRequest rowRequest,
+        [ActionParameter] UpdateRowRequest updateRowRequest)
+    {
+        var client = new MicrosoftExcelClient();
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='A{rowRequest.RowIndex}:Z{rowRequest.RowIndex}')/insert",
+            Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+        request.AddJsonBody(new
+        {
+            shift = "Down"
+        });
+        await client.ExecuteWithHandling(request);
+        return await UpdateRow(workbookRequest, worksheetRequest, rowRequest, updateRowRequest);
     }
 
     [Action("Update row", Description = "Update row by address")]
