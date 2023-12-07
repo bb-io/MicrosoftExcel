@@ -88,7 +88,7 @@ namespace Apps.MicrosoftExcel.Actions
         public async Task<RowDto> AddRow(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] TableRequest tableRequest,
-        [ActionParameter] GetTableRowRequest rowRequest,
+        [ActionParameter] TableRowOptionalRequest rowRequest,
         [ActionParameter] UpdateRowRequest updateRowRequest)
         {
             var client = new MicrosoftExcelClient();
