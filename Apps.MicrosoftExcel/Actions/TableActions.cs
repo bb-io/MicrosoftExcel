@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
+using System.Xml.Linq;
 
 namespace Apps.MicrosoftExcel.Actions
 {
@@ -81,6 +82,26 @@ namespace Apps.MicrosoftExcel.Actions
                 hasHeaders = createTableRequest.HasHeaders ?? true
             });
             return await client.ExecuteWithHandling<TableDto>(request);
+        }
+
+        [Action("Add new table row", Description = "Add new table row")]
+        public async Task<RowDto> AddRow(
+        [ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] TableRequest tableRequest,
+        [ActionParameter] GetTableRowRequest rowRequest,
+        [ActionParameter] UpdateRowRequest updateRowRequest)
+        {
+            var client = new MicrosoftExcelClient();
+            var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/add",
+                Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+            request.AddJsonBody(new
+            {
+                index = rowRequest.RowIndex,
+                values = new[] { updateRowRequest.Row }
+            });
+            var result = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+            return new RowDto() { Row = result.Values.First() };
         }
     }
 }
