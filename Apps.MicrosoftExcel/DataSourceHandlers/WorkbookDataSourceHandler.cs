@@ -25,7 +25,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         {
             var request = new MicrosoftExcelRequest(endpoint, Method.Get,
                 InvocationContext.AuthenticationCredentialsProviders);
-            request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
+            request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
             var files = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
