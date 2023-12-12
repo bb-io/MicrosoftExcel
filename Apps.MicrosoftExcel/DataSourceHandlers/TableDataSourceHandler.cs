@@ -26,6 +26,7 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers
 
             var request = new MicrosoftExcelRequest(endpoint, Method.Get,
                     InvocationContext.AuthenticationCredentialsProviders);
+            request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
             var files = await client.ExecuteWithHandling<ListWrapper<TableDto>>(request);
             var filteredFiles = files.Value
                 .Select(i => new { i.Id, i.Name });
