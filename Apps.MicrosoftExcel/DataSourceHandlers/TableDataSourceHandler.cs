@@ -20,6 +20,10 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers
         public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
             CancellationToken cancellationToken)
         {
+            if (WorkbookRequest == null || string.IsNullOrEmpty(WorkbookRequest.WorkbookId))
+            {
+                throw new ArgumentException("Please, select the workbook first");
+            }
             var client = new MicrosoftExcelClient();
             var endpoint = $"/items/{WorkbookRequest.WorkbookId}/workbook/tables";
             var worksheetsDictionary = new Dictionary<string, string>();
