@@ -17,7 +17,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
     {
         var client = new MicrosoftExcelClient();
         var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
-                       "$top=20"; //$filter=fields/ContentType eq 'Document'&
+                       "$top=100"; //$filter=fields/ContentType eq 'Document'&
         var filesDictionary = new Dictionary<string, string>();
         var filesAmount = 0;
 
