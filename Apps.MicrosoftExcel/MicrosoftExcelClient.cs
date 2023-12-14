@@ -1,7 +1,9 @@
 ﻿using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 using System.Linq;
+using System.Threading;
 
 namespace Apps.MicrosoftExcel;
 
@@ -28,10 +30,10 @@ public class MicrosoftExcelClient : RestClient
     {
         var response = await ExecuteAsync(request);
 
-        if(response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
         {
             int timeout = int.Parse(response.Headers.Where(x => x.Name == "Retry-After").First().Value.ToString());
-            await Task.Delay(timeout * 1000);
+            await Task.Delay((timeout + 1) * 1000);
             return await ExecuteWithHandling(request);
         }
 
