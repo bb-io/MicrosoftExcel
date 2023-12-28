@@ -5,21 +5,26 @@ using Apps.MicrosoftExcel.DataSourceHandlers;
 using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
 using Apps.MicrosoftExcel.Models.Requests;
+using Apps.MicrosoftExcel.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.MicrosoftExcel.Actions;
 
 [ActionList]
 public class WorksheetActions : BaseInvocable
 {
-    public WorksheetActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+    
+    public WorksheetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
+        : base(invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     [Action("Get cell", Description = "Get cell by address")]
@@ -137,7 +142,7 @@ public class WorksheetActions : BaseInvocable
     }
 
     [Action("Download CSV file", Description = "Download CSV file")]
-    public async Task<File> DownloadCSV(
+    public async Task<FileResponse> DownloadCSV(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
     {
@@ -147,10 +152,9 @@ public class WorksheetActions : BaseInvocable
         {
             csv.AppendLine(string.Join(",", row));
         });
-        return new File(Encoding.ASCII.GetBytes(csv.ToString())) 
-        { 
-            ContentType = MediaTypeNames.Application.Octet, 
-            Name = "Table.csv"
-        };
+
+        using var stream = new MemoryStream(Encoding.ASCII.GetBytes(csv.ToString()));
+        var csvFile = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Csv, "Table.csv");
+        return new(csvFile);
     }
 }
