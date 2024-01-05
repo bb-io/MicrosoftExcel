@@ -85,17 +85,17 @@ public class WorksheetActions : BaseInvocable
         var newRowIndex = rows.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
-        var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
+        //var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
 
-        var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn}{newRowIndex}:{endColumn}{newRowIndex}')/insert",
-            Method.Post, InvocationContext.AuthenticationCredentialsProviders);
-        request.AddJsonBody(new
-        {
-            shift = "Down",
+        //var request = new MicrosoftExcelRequest(
+        //    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn}{newRowIndex}:{endColumn}{newRowIndex}')/insert",
+        //    Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+        //request.AddJsonBody(new
+        //{
+        //    shift = "Down",
 
-        });
-        await client.ExecuteWithHandling(request);
+        //});
+        //await client.ExecuteWithHandling(request);
         return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex});
     }
 
