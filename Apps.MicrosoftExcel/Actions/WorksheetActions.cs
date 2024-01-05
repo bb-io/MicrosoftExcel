@@ -27,7 +27,7 @@ public class WorksheetActions : BaseInvocable
         _fileManagementClient = fileManagementClient;
     }
 
-    [Action("Get cell", Description = "Get cell by address")]
+    [Action("Get sheet cell", Description = "Get cell by address")]
     public async Task<CellDto> GetCell(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
@@ -41,7 +41,7 @@ public class WorksheetActions : BaseInvocable
         return new CellDto(){ Value = cellValue.Values.First().First() };
     }
 
-    [Action("Update cell", Description = "Update cell by address")]
+    [Action("Update sheet cell", Description = "Update cell by address")]
     public async Task<CellDto> UpdateCell(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
@@ -60,7 +60,7 @@ public class WorksheetActions : BaseInvocable
         return new CellDto() { Value = cellValue.Values.First().First() };
     }
 
-    [Action("Get row", Description = "Get row by address")]
+    [Action("Get sheet row", Description = "Get row by address")]
     public async Task<RowDto> GetRow(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
@@ -74,35 +74,42 @@ public class WorksheetActions : BaseInvocable
         return new RowDto() { Row = rowValue.Values.First() };
     }
 
-    [Action("Add new row", Description = "Add new row")]
+    [Action("Add new sheet row", Description = "Adds a new row to the first empty line of the sheet")]
     public async Task<RowDto> AddRow(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
-        [ActionParameter] GetRowRequest rowRequest,
-        [ActionParameter] UpdateRowRequest updateRowRequest)
+        [ActionParameter] InsertRowRequest insertRowRequest)
     {
         var client = new MicrosoftExcelClient();
+        var rows = await GetUsedRange(workbookRequest, worksheetRequest);
+        var newRowIndex = rows.Rows.Count + 1;
+
+        var startColumn = insertRowRequest.ColumnAddress ?? "A";
+        var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
+
         var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='A{rowRequest.RowIndex}:Z{rowRequest.RowIndex}')/insert",
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn}{newRowIndex}:{endColumn}{newRowIndex}')/insert",
             Method.Post, InvocationContext.AuthenticationCredentialsProviders);
         request.AddJsonBody(new
         {
-            shift = "Down"
+            shift = "Down",
+
         });
         await client.ExecuteWithHandling(request);
-        return await UpdateRow(workbookRequest, worksheetRequest, rowRequest, updateRowRequest);
+        return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex});
     }
 
-    [Action("Update row", Description = "Update row by address")]
+    [Action("Update sheet row", Description = "Update row by start address")]
     public async Task<RowDto> UpdateRow(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
-        [ActionParameter] GetRowRequest rowRequest,
         [ActionParameter] UpdateRowRequest updateRowRequest)
     {
         var client = new MicrosoftExcelClient();
+        var (startColumn, row) = updateRowRequest.CellAddress.ToExcelColumnAndRow();
+        var endColumn = startColumn + updateRowRequest.Row.Count - 1;
         var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowRequest.Column1}{rowRequest.RowIndex}:{rowRequest.Column2}{rowRequest.RowIndex}')",
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn.ToExcelColumnAddress()}{row}:{endColumn.ToExcelColumnAddress()}{row}')",
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
         request.AddJsonBody(new
         {
@@ -128,7 +135,7 @@ public class WorksheetActions : BaseInvocable
         return await client.ExecuteWithHandling<WorksheetDto>(request);
     }
 
-    [Action("Get used range", Description = "Get used range")]
+    [Action("Get sheet used range", Description = "Get used range")]
     public async Task<RowsDto> GetUsedRange(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
@@ -141,7 +148,7 @@ public class WorksheetActions : BaseInvocable
         return new RowsDto() { Rows = rowValue.Values.ToList() };
     }
 
-    [Action("Download CSV file", Description = "Download CSV file")]
+    [Action("Download sheet CSV file", Description = "Download CSV file")]
     public async Task<FileResponse> DownloadCSV(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)

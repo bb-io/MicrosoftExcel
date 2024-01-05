@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Apps.MicrosoftExcel.Models.Requests
 {
-    public class UpdateRowRequest
+    public class InsertRowRequest
     {
         public List<string> Row { get; set; }
 
-        [Display("Start cell address", Description = "Cell address (e.g. \"A1\", \"B2\", \"C3\")")]
-        public string CellAddress { get; set; }
+        [Display("Start column address", Description = "Column address (e.g. \"A\", \"B\", \"C\")")]
+        public string? ColumnAddress { get; set; }
     }
 }
