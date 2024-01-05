@@ -79,12 +79,13 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] InsertRowRequest insertRowRequest)
-    {
-        var client = new MicrosoftExcelClient();
-        var rows = await GetUsedRange(workbookRequest, worksheetRequest);
-        var newRowIndex = rows.Rows.Count + 1;
+    {        
+        var range = await GetUsedRange(workbookRequest, worksheetRequest);
+        var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
+
+        //var client = new MicrosoftExcelClient();
         //var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
 
         //var request = new MicrosoftExcelRequest(
