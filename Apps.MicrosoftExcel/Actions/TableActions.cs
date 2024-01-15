@@ -26,7 +26,9 @@ namespace Apps.MicrosoftExcel.Actions
                 Method.Get, InvocationContext.AuthenticationCredentialsProviders);
 
             var result = await client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
-            return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
+            var allRows = result.Value.ToList();
+            return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.Values.First() }).ToList() };
+            //return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
         }
 
         [Action("Get table row", Description = "Get table row")]
