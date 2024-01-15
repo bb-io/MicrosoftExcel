@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Apps.MicrosoftExcel.Dtos
 {
-    public class RowsDto
+    public class ColumnDto
     {
-        public List<ColumnDto> Rows { get; set; }
+        public List<string> Columns { get; set; }
     }
 }
