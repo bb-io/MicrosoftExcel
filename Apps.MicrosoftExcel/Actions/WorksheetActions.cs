@@ -280,14 +280,14 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] [Display("Source description")] string? sourceDescription)
     {
         var rows = await GetUsedRange(workbookRequest, worksheetRequest);
-        var maxLength = rows.Rows.Max(list => list.Columns.Count);
+        var maxLength = rows.Rows.Max(list => list.Count);
 
         var parsedGlossary = new Dictionary<string, List<string>>();
 
         for (var i = 0; i < maxLength; i++)
         {
-            parsedGlossary[rows.Rows[0].Columns[i]] = new List<string>(rows.Rows.Skip(1)
-                .Select(row => i < row.Columns.Count ? row.Columns[i] : string.Empty));
+            parsedGlossary[rows.Rows[0][i]] = new List<string>(rows.Rows.Skip(1)
+                .Select(row => i < row.Count ? row[i] : string.Empty));
         }
         
         var glossaryConceptEntries = new List<GlossaryConceptEntry>();
