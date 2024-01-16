@@ -87,7 +87,7 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] InsertRowRequest insertRowRequest)
     {        
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
-        var newRowIndex = range.Rows.First().Columns.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
+        var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
 
@@ -157,7 +157,7 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
 
     [Action("Get sheet used range", Description = "Get used range in a sheet")]
@@ -171,7 +171,7 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
 
     [Action("Download sheet CSV file", Description = "Download CSV file")]

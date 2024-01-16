@@ -26,7 +26,7 @@ namespace Apps.MicrosoftExcel.Actions
 
             var result = await client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
             var allRows = result.Value.ToList();
-            return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.Values.First() }).ToList() };
+            return new RowsDto() { Rows = allRows.Select(x => x.Values.First()).ToList() };
             //return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
         }
 
