@@ -8,6 +8,6 @@ namespace Apps.MicrosoftExcel.Dtos
 {
     public class RowsDto
     {
-        public List<ColumnDto> Rows { get; set; }
+        public List<List<string>> Rows { get; set; }
     }
 }
