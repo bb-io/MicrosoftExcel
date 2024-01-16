@@ -1,7 +1,5 @@
 ﻿using System.Net.Mime;
 using System.Text;
-using System.Xml.Linq;
-using Apps.MicrosoftExcel.DataSourceHandlers;
 using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
 using Apps.MicrosoftExcel.Models.Requests;
@@ -10,9 +8,9 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Newtonsoft.Json.Linq;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using RestSharp;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -183,5 +181,80 @@ public class WorksheetActions : BaseInvocable
         using var stream = new MemoryStream(Encoding.ASCII.GetBytes(csv.ToString()));
         var csvFile = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Csv, "Table.csv");
         return new(csvFile);
+    }
+
+    [Action("Import glossary", Description = "Import glossary as Excel worksheet")]
+    public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest, 
+        [ActionParameter] GlossaryRequest glossary)
+    {
+        const string term = "Term";
+        const string variations = "Variations";
+        const string notes = "Notes";
+        const string id = "ID";
+        const string subjectField = "Subject field";
+        const string definition = "Definition";
+
+        static string? GetColumnValue(string columnName, GlossaryLanguageSection languageSection)
+        {
+            var languageCode = languageSection.LanguageCode;
+
+            if (columnName == $"{term} ({languageCode})")
+                return languageSection.Terms.First().Term;
+
+            if (columnName == $"{variations} ({languageCode})")
+            {
+                var variations = languageSection.Terms.Skip(1).Select(term => term.Term);
+                return string.Join("; ", variations);
+            }
+
+            if (columnName == $"{notes} ({languageCode})")
+            {
+                var notes = languageSection.Terms.Select(term =>
+                    term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
+                return string.Join("; ", notes.Where(note => note != string.Empty));
+            }
+
+            return null;
+        }
+        
+        var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
+        var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+
+        var worksheet = await CreateWorksheet(workbookRequest,
+            new() { Name = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)! });
+
+        var languagesPresent = blackbirdGlossary.ConceptEntries
+            .SelectMany(entry => entry.LanguageSections)
+            .Select(section => section.LanguageCode)
+            .Distinct();
+        
+        var languageRelatedColumns = languagesPresent
+            .SelectMany(language => new[] { term, variations, notes }
+            .Select(suffix => $"{suffix} ({language})"))
+            .ToList();
+
+        await AddRow(workbookRequest, new() { Worksheet = worksheet.Id }, new()
+        {
+            Row = new List<string>(new[] { id, definition, subjectField, notes }.Concat(languageRelatedColumns))
+        });
+
+        foreach (var entry in blackbirdGlossary.ConceptEntries)
+        {
+            var languageRelatedValues = (IEnumerable<string>)entry.LanguageSections
+                .SelectMany(languageSection => languageRelatedColumns
+                    .Select(column => GetColumnValue(column, languageSection)))
+                .Where(value => value != null);
+            
+            await AddRow(workbookRequest, new() { Worksheet = worksheet.Id }, new()
+            {
+                Row = new List<string>(new[]
+                {
+                    entry.Id, entry.Definition ?? "", entry.SubjectField ?? "",
+                    string.Join(';', entry.Notes ?? Enumerable.Empty<string>())
+                }.Concat(languageRelatedValues))
+            });
+        }
+
+        return worksheet;
     }
 }
