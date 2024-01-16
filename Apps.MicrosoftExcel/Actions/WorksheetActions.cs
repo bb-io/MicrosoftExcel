@@ -79,7 +79,7 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] InsertRowRequest insertRowRequest)
     {        
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
-        var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
+        var newRowIndex = range.Rows.First().Columns.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
 
@@ -134,7 +134,25 @@ public class WorksheetActions : BaseInvocable
         return await client.ExecuteWithHandling<WorksheetDto>(request);
     }
 
-    [Action("Get sheet used range", Description = "Get used range")]
+    [Action("Get sheet range", Description = "Get a specific range of rows and columns in a sheet")]
+    public async Task<RowsDto> GetRange(
+    [ActionParameter] WorkbookRequest workbookRequest,
+    [ActionParameter] WorksheetRequest worksheetRequest,
+    [ActionParameter] GetRangeRequest rangeRequest)
+    {
+        if (!rangeRequest.Range.IsValidExcelRange())
+            throw new Exception($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
+
+        var client = new MicrosoftExcelClient();
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rangeRequest.Range}')",
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var allRows = rowValue.Values.ToList();
+        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
+    }
+
+    [Action("Get sheet used range", Description = "Get used range in a sheet")]
     public async Task<RowsDto> GetUsedRange(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
@@ -144,7 +162,8 @@ public class WorksheetActions : BaseInvocable
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
-        return new RowsDto() { Rows = rowValue.Values.ToList() };
+        var allRows = rowValue.Values.ToList();
+        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
     }
 
     [Action("Download sheet CSV file", Description = "Download CSV file")]

@@ -33,6 +33,13 @@ namespace Apps.MicrosoftExcel.Extensions
             return sum;
         }
 
+        public static bool IsValidExcelRange(this string str)
+        {
+            var regex = @"^\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?(?:,\s*(?:\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?))*$";
+            var match = Regex.Match(str, regex);
+            return match.Success;
+        }
+
         public static (int, int) ToExcelColumnAndRow(this string str)
         {
             var regex = @"([A-Z]+)(\d+)";
