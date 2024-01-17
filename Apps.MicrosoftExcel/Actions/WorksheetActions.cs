@@ -355,7 +355,7 @@ public class WorksheetActions : BaseInvocable
                         break;
                     
                     case var termVariations when new Regex($@"{Variations} \(.*?\)").IsMatch(termVariations):
-                        if (i < columnValues.Count)
+                        if (i < columnValues.Count && !string.IsNullOrWhiteSpace(columnValues[i]))
                         {
                             languageCode = new Regex($@"{Variations} \((.*?)\)").Match(termVariations).Groups[1].Value;
                             var targetLanguageSectionIndex =
@@ -375,8 +375,10 @@ public class WorksheetActions : BaseInvocable
                             
                             var notesDictionary = columnValues[i]
                                 .Split(";; ")
-                                .Select(note => new { Term = note.Split(": ")[0], Notes = note.Split(": ")[1] })
-                                .ToDictionary(value => value.Term.Trim(), 
+                                .Select(note => note.Split(": "))
+                                .Where(note => note.Length > 1)
+                                .Select(note => new { Term = note[0], Notes = note[1] })
+                                .ToDictionary(value => value.Term.Trim(),
                                     value => value.Notes.Split(';').Select(note => note.Trim()));
                         
                             foreach (var termNotesPair in notesDictionary)

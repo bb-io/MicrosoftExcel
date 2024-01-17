@@ -12,17 +12,17 @@ Microsoft Excel is a spreadsheet software that enables users to organize, analyz
 
 To utilize the **Export glossary** action, ensure that the Excel worksheet mirrors the structure obtained from the **Import glossary** action result. Follow these guidelines:
 
-- **Worksheet Structure**:
+- **Worksheet structure**:
    - The first row serves as column names, representing properties of the glossary entity: _ID_, _Definition_, _Subject field_, _Notes_, _Term (language code)_, _Variations (language code)_, _Notes (language code)_.
    - Include columns for each language present in the glossary. For instance, if the glossary includes English and Spanish, the column names will be: _ID_, _Definition_, _Subject field_, _Notes_, _Term (en)_, _Variations (en)_, _Notes (en)_, _Term (es)_, _Variations (es)_, _Notes (es)_.
-- **Optional Fields**:
+- **Optional fields**:
     - _Definition_, _Subject field_, _Notes_, _Variations (language code)_, _Notes (language code)_ are optional and can be left empty.
 - **Main term and synonyms**:
     - _Term (language code)_ represents the primary term in the specified language for the glossary.
     - _Variations (language code)_ includes synonymous values for the term.
 - **Notes handing**:
     - Notes in the _Notes_ column should be separated by ';' if there are multiple notes for a given entry.
-- **Variations Handling**:
+- **Variations handling**:
     - Variations in the _Variations (language code)_ column should be separated by ';' if there are multiple variations for a given term.
 - **Terms notes format**:
     - Each note in the _Notes (language code)_ column should follow this structure: **Term or variation: note**.
