@@ -424,31 +424,6 @@ public class WorksheetActions : BaseInvocable
             await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
         return new() { Glossary = glossaryFileReference };
     }
-    
-    private static async Task<Dictionary<string, List<string>>> ParseCsvFile(Stream csvFileStream)
-    {
-        using var reader = new StreamReader(csvFileStream);
-        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture));
-        
-        var csvDictionary = new Dictionary<string, List<string>>();
-        var records = csv.GetRecords<dynamic>().ToList();
-
-        foreach (var record in records)
-        {
-            var recordDictionary =
-                (record as IDictionary<string, object>)!.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
-
-            foreach (var kvp in recordDictionary)
-            {
-                if (!csvDictionary.ContainsKey(kvp.Key))
-                    csvDictionary[kvp.Key] = new List<string>();
-
-                csvDictionary[kvp.Key].Add(kvp.Value ?? "");
-            }
-        }
-        
-        return csvDictionary;
-    }
 
     #endregion
 }
