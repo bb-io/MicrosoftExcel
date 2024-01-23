@@ -1,18 +1,24 @@
-﻿using System.Net.Mime;
+﻿using System.Globalization;
+using System.Net.Mime;
 using System.Text;
-using System.Xml.Linq;
-using Apps.MicrosoftExcel.DataSourceHandlers;
+using System.Text.RegularExpressions;
 using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
+using Apps.MicrosoftExcel.Models;
 using Apps.MicrosoftExcel.Models.Requests;
 using Apps.MicrosoftExcel.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Newtonsoft.Json.Linq;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Parsers;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using CsvHelper;
+using CsvHelper.Configuration;
 using RestSharp;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -81,7 +87,7 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] InsertRowRequest insertRowRequest)
     {        
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
-        var newRowIndex = range.Rows.First().Columns.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
+        var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
 
@@ -151,7 +157,7 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
 
     [Action("Get sheet used range", Description = "Get used range in a sheet")]
@@ -165,7 +171,7 @@ public class WorksheetActions : BaseInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => new ColumnDto() { Columns = x.ToList() }).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
 
     [Action("Download sheet CSV file", Description = "Download CSV file")]
@@ -184,4 +190,242 @@ public class WorksheetActions : BaseInvocable
         var csvFile = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Csv, "Table.csv");
         return new(csvFile);
     }
+
+    #region Glossaries
+    
+    private const string Term = "Term";
+    private const string Variations = "Variations";
+    private const string Notes = "Notes";
+    private const string Id = "ID";
+    private const string SubjectField = "Subject field";
+    private const string Definition = "Definition";
+
+    [Action("Import glossary", Description = "Import glossary as Excel worksheet")]
+    public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest, 
+        [ActionParameter] GlossaryWrapper glossary)
+    {
+        static string? GetColumnValue(string columnName, GlossaryLanguageSection languageSection)
+        {
+            var languageCode = languageSection.LanguageCode;
+
+            if (columnName == $"{Term} ({languageCode})")
+                return languageSection.Terms.First().Term;
+
+            if (columnName == $"{Variations} ({languageCode})")
+            {
+                var variations = languageSection.Terms.Skip(1).Select(term => term.Term);
+                return string.Join(';', variations);
+            }
+
+            if (columnName == $"{Notes} ({languageCode})")
+            {
+                var notes = languageSection.Terms.Select(term =>
+                    term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
+                return string.Join(";; ", notes.Where(note => note != string.Empty));
+            }
+
+            return null;
+        }
+        
+        var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
+        var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+
+        var worksheet = await CreateWorksheet(workbookRequest,
+            new() { Name = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)! });
+
+        var languagesPresent = blackbirdGlossary.ConceptEntries
+            .SelectMany(entry => entry.LanguageSections)
+            .Select(section => section.LanguageCode)
+            .Distinct();
+        
+        var languageRelatedColumns = languagesPresent
+            .SelectMany(language => new[] { Term, Variations, Notes }
+            .Select(suffix => $"{suffix} ({language})"))
+            .ToList();
+
+        var rowsToAdd = new List<List<string>>();
+        rowsToAdd.Add(new List<string>(new[] { Id, Definition, SubjectField, Notes }.Concat(languageRelatedColumns)));
+
+        foreach (var entry in blackbirdGlossary.ConceptEntries)
+        {
+            var languageRelatedValues = (IEnumerable<string>)entry.LanguageSections
+                .SelectMany(languageSection => languageRelatedColumns
+                    .Select(column => GetColumnValue(column, languageSection)))
+                .Where(value => value != null);
+            
+            rowsToAdd.Add(new List<string>(new[]
+            {
+                entry.Id, entry.Definition ?? "", entry.SubjectField ?? "",
+                string.Join(';', entry.Notes ?? Enumerable.Empty<string>())
+            }.Concat(languageRelatedValues)));
+        }
+        
+        var startColumn = 1;
+        var startRow = 1;
+        
+        var endColumn = startColumn + rowsToAdd[0].Count - 1;
+        var addRowsRequest = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheet.Id}/range(address='{startColumn.ToExcelColumnAddress()}{startRow}:{endColumn.ToExcelColumnAddress()}{rowsToAdd.Count}')",
+            Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
+        addRowsRequest.AddJsonBody(new { values = rowsToAdd });
+        await new MicrosoftExcelClient().ExecuteWithHandling(addRowsRequest);
+
+        return worksheet;
+    }
+
+    [Action("Export glossary", Description = "Export glossary from Excel worksheet")]
+    public async Task<GlossaryWrapper> ExportGlossary([ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest,
+        [ActionParameter] [Display("Title")] string? title,
+        [ActionParameter] [Display("Source description")] string? sourceDescription)
+    {
+        var rows = await GetUsedRange(workbookRequest, worksheetRequest);
+        var maxLength = rows.Rows.Max(list => list.Count);
+
+        var parsedGlossary = new Dictionary<string, List<string>>();
+
+        for (var i = 0; i < maxLength; i++)
+        {
+            parsedGlossary[rows.Rows[0][i]] = new List<string>(rows.Rows.Skip(1)
+                .Select(row => i < row.Count ? row[i] : string.Empty));
+        }
+        
+        var glossaryConceptEntries = new List<GlossaryConceptEntry>();
+
+        var entriesCount = rows.Rows.Count - 1;
+        
+        for (var i = 0; i < entriesCount; i++)
+        {
+            string entryId = null;
+            string? entryDefinition = null;
+            string? entrySubjectField = null;
+            List<string>? entryNotes = null;
+            
+            var languageSections = new List<GlossaryLanguageSection>();
+
+            foreach (var column in parsedGlossary)
+            {
+                var columnName = column.Key;
+                var columnValues = column.Value;
+                
+                switch (columnName)
+                {
+                    case Id:
+                        entryId = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(entryId))
+                            entryId = Guid.NewGuid().ToString();
+                        
+                        break;
+                    
+                    case Definition:
+                        entryDefinition = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(entryDefinition))
+                            entryDefinition = null;
+                        
+                        break;
+                    
+                    case SubjectField:
+                        entrySubjectField = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(entrySubjectField))
+                            entrySubjectField = null;
+                        
+                        break;
+                    
+                    case Notes:
+                        entryNotes = (i < columnValues.Count ? columnValues[i] : string.Empty).Split(';')
+                            .Select(value => value.Trim()).ToList();
+                        
+                        if (entryNotes.All(string.IsNullOrWhiteSpace))
+                            entryNotes = null;
+                        
+                        break;
+                    
+                    case var languageTerm when new Regex($@"{Term} \(.*?\)").IsMatch(languageTerm):
+                        var languageCode = new Regex($@"{Term} \((.*?)\)").Match(languageTerm).Groups[1].Value;
+                        if (i < columnValues.Count)
+                            languageSections.Add(new(languageCode,
+                                new List<GlossaryTermSection>(new GlossaryTermSection[]
+                                    { new(columnValues[i].Trim()) })));
+                        else
+                            languageSections.Add(new(languageCode,
+                                new List<GlossaryTermSection>(new GlossaryTermSection[] { new(string.Empty) }))); 
+                        break;
+                    
+                    case var termVariations when new Regex($@"{Variations} \(.*?\)").IsMatch(termVariations):
+                        if (i < columnValues.Count && !string.IsNullOrWhiteSpace(columnValues[i]))
+                        {
+                            languageCode = new Regex($@"{Variations} \((.*?)\)").Match(termVariations).Groups[1].Value;
+                            var targetLanguageSectionIndex =
+                                languageSections.FindIndex(section => section.LanguageCode == languageCode);
+
+                            languageSections[targetLanguageSectionIndex].Terms.AddRange(columnValues[i].Split(';')
+                                .Select(term => new GlossaryTermSection(term.Trim())));
+                        }
+                        break;
+                    
+                    case var termNotes when new Regex($@"{Notes} \(.*?\)").IsMatch(termNotes):
+                        if (i < columnValues.Count)
+                        {
+                            languageCode = new Regex($@"{Notes} \((.*?)\)").Match(termNotes).Groups[1].Value;
+                            var targetLanguageSectionIndex =
+                                languageSections.FindIndex(section => section.LanguageCode == languageCode);
+                            
+                            var notesDictionary = columnValues[i]
+                                .Split(";; ")
+                                .Select(note => note.Split(": "))
+                                .Where(note => note.Length > 1)
+                                .Select(note => new { Term = note[0], Notes = note[1] })
+                                .ToDictionary(value => value.Term.Trim(),
+                                    value => value.Notes.Split(';').Select(note => note.Trim()));
+                        
+                            foreach (var termNotesPair in notesDictionary)
+                            {
+                                var targetTermIndex = languageSections[targetLanguageSectionIndex].Terms
+                                    .FindIndex(term => term.Term == termNotesPair.Key);
+                                languageSections[targetLanguageSectionIndex].Terms[targetTermIndex].Notes =
+                                    termNotesPair.Value.ToList();
+                            }
+                        }
+                        
+                        break;
+                }
+            }
+
+            var entry = new GlossaryConceptEntry(entryId, languageSections)
+            {
+                Definition = entryDefinition,
+                Notes = entryNotes,
+                SubjectField = entrySubjectField
+            };
+            glossaryConceptEntries.Add(entry);
+        }
+
+        if (title == null)
+        {
+            var client = new MicrosoftExcelClient();
+            var getWorksheetRequest =
+                new MicrosoftExcelRequest(
+                    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}", Method.Get,
+                    InvocationContext.AuthenticationCredentialsProviders);
+            var worksheet = await client.ExecuteWithHandling<WorksheetDto>(getWorksheetRequest);
+            title = worksheet.Name;
+        }
+        
+        var glossary = new Glossary(glossaryConceptEntries)
+        {
+            Title = title, 
+            SourceDescription = sourceDescription 
+                                ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}" 
+        };
+
+        var glossaryStream = glossary.ConvertToTBX();
+        var glossaryFileReference =
+            await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
+        return new() { Glossary = glossaryFileReference };
+    }
+
+    #endregion
 }
