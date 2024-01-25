@@ -236,7 +236,7 @@ public class WorksheetActions : BaseInvocable
             return null;
         }
         
-        var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
+        await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
         var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
 
         var worksheet = await CreateWorksheet(workbookRequest,
@@ -266,7 +266,7 @@ public class WorksheetActions : BaseInvocable
             
             rowsToAdd.Add(new List<string>(new[]
             {
-                entry.Id, 
+                string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString() : entry.Id,
                 entry.Definition ?? "", 
                 entry.SubjectField ?? "",
                 string.Join(';', entry.Notes ?? Enumerable.Empty<string>())
