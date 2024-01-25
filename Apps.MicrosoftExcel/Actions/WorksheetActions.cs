@@ -204,25 +204,34 @@ public class WorksheetActions : BaseInvocable
     public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest, 
         [ActionParameter] GlossaryWrapper glossary)
     {
-        static string? GetColumnValue(string columnName, GlossaryLanguageSection languageSection)
+        static string? GetColumnValue(string columnName, GlossaryConceptEntry entry, string languageCode)
         {
-            var languageCode = languageSection.LanguageCode;
+            var languageSection = entry.LanguageSections.FirstOrDefault(ls => ls.LanguageCode == languageCode);
 
-            if (columnName == $"{Term} ({languageCode})")
-                return languageSection.Terms.First().Term;
-
-            if (columnName == $"{Variations} ({languageCode})")
+            if (languageSection != null)
             {
-                var variations = languageSection.Terms.Skip(1).Select(term => term.Term);
-                return string.Join(';', variations);
+                if (columnName == $"{Term} ({languageCode})")
+                    return languageSection.Terms.FirstOrDefault()?.Term;
+
+                if (columnName == $"{Variations} ({languageCode})")
+                {
+                    var variations = languageSection.Terms.Skip(1).Select(term => term.Term);
+                    return string.Join(';', variations);
+                }
+
+                if (columnName == $"{Notes} ({languageCode})")
+                {
+                    var notes = languageSection.Terms.Select(term =>
+                        term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
+                    return string.Join(";; ", notes.Where(note => note != string.Empty));
+                }
+                    
+                return null;
             }
 
-            if (columnName == $"{Notes} ({languageCode})")
-            {
-                var notes = languageSection.Terms.Select(term =>
-                    term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
-                return string.Join(";; ", notes.Where(note => note != string.Empty));
-            }
+            if (columnName == $"{Term} ({languageCode})" || columnName == $"{Variations} ({languageCode})" ||
+                columnName == $"{Notes} ({languageCode})")
+                return string.Empty;
 
             return null;
         }
@@ -236,7 +245,8 @@ public class WorksheetActions : BaseInvocable
         var languagesPresent = blackbirdGlossary.ConceptEntries
             .SelectMany(entry => entry.LanguageSections)
             .Select(section => section.LanguageCode)
-            .Distinct();
+            .Distinct()
+            .ToList();
         
         var languageRelatedColumns = languagesPresent
             .SelectMany(language => new[] { Term, Variations, Notes }
@@ -248,14 +258,17 @@ public class WorksheetActions : BaseInvocable
 
         foreach (var entry in blackbirdGlossary.ConceptEntries)
         {
-            var languageRelatedValues = (IEnumerable<string>)entry.LanguageSections
-                .SelectMany(languageSection => languageRelatedColumns
-                    .Select(column => GetColumnValue(column, languageSection)))
+            var languageRelatedValues = (IEnumerable<string>)languagesPresent
+                .SelectMany(languageCode =>
+                    languageRelatedColumns
+                        .Select(column => GetColumnValue(column, entry, languageCode)))
                 .Where(value => value != null);
             
             rowsToAdd.Add(new List<string>(new[]
             {
-                entry.Id, entry.Definition ?? "", entry.SubjectField ?? "",
+                entry.Id, 
+                entry.Definition ?? "", 
+                entry.SubjectField ?? "",
                 string.Join(';', entry.Notes ?? Enumerable.Empty<string>())
             }.Concat(languageRelatedValues)));
         }
