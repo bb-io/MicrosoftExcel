@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Net.Mime;
+﻿using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
 using Apps.MicrosoftExcel.Dtos;
@@ -9,21 +8,16 @@ using Apps.MicrosoftExcel.Models.Requests;
 using Apps.MicrosoftExcel.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
-using Blackbird.Applications.Sdk.Glossaries.Utils.Parsers;
-using Blackbird.Applications.Sdk.Utils.Extensions.Files;
-using CsvHelper;
-using CsvHelper.Configuration;
 using RestSharp;
 
 namespace Apps.MicrosoftExcel.Actions;
 
 [ActionList]
-public class WorksheetActions : BaseInvocable
+public class WorksheetActions : MicrosoftExcelInvocable
 {
     private readonly IFileManagementClient _fileManagementClient;
     
@@ -39,11 +33,10 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] GetCellRequest cellRequest)
     {
-        var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-        var cellValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var cellValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new CellDto(){ Value = cellValue.Values.First().First() };
     }
 
@@ -54,7 +47,6 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] GetCellRequest cellRequest,
         [ActionParameter] UpdateCellRequest updateCellRequest)
     {
-        var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
@@ -62,7 +54,7 @@ public class WorksheetActions : BaseInvocable
         {
             values = new[] { new[] { updateCellRequest.Value } }
         });
-        var cellValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var cellValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new CellDto() { Value = cellValue.Values.First().First() };
     }
 
@@ -72,11 +64,10 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] GetRowRequest rowRequest)
     {
-        var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowRequest.Column1}{rowRequest.RowIndex}:{rowRequest.Column2}{rowRequest.RowIndex}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-        var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = rowValue.Values.First() };
     }
 
@@ -90,8 +81,7 @@ public class WorksheetActions : BaseInvocable
         var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
-
-        //var client = new MicrosoftExcelClient();
+        
         //var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
 
         //var request = new MicrosoftExcelRequest(
@@ -102,7 +92,7 @@ public class WorksheetActions : BaseInvocable
         //    shift = "Down",
 
         //});
-        //await client.ExecuteWithHandling(request);
+        //await Client.ExecuteWithHandling(request);
         return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex});
     }
 
@@ -112,7 +102,6 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] UpdateRowRequest updateRowRequest)
     {
-        var client = new MicrosoftExcelClient();
         var (startColumn, row) = updateRowRequest.CellAddress.ToExcelColumnAndRow();
         var endColumn = startColumn + updateRowRequest.Row.Count - 1;
         var request = new MicrosoftExcelRequest(
@@ -122,7 +111,7 @@ public class WorksheetActions : BaseInvocable
         {
             values = new[] { updateRowRequest.Row }
         });
-        var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = rowValue.Values.First() };
     }
 
@@ -131,7 +120,6 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] CreateWorksheetRequest createWorksheetRequest)
     {
-        var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets",
             Method.Post, InvocationContext.AuthenticationCredentialsProviders);
@@ -139,7 +127,7 @@ public class WorksheetActions : BaseInvocable
         {
             name = createWorksheetRequest.Name
         });
-        return await client.ExecuteWithHandling<WorksheetDto>(request);
+        return await Client.ExecuteWithHandling<WorksheetDto>(request);
     }
 
     [Action("Get sheet range", Description = "Get a specific range of rows and columns in a sheet")]
@@ -150,12 +138,11 @@ public class WorksheetActions : BaseInvocable
     {
         if (!rangeRequest.Range.IsValidExcelRange())
             throw new Exception($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
-
-        var client = new MicrosoftExcelClient();
+        
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rangeRequest.Range}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-        var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
@@ -165,11 +152,10 @@ public class WorksheetActions : BaseInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
     {
-        var client = new MicrosoftExcelClient();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-        var rowValue = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
@@ -202,7 +188,10 @@ public class WorksheetActions : BaseInvocable
 
     [Action("Import glossary", Description = "Import glossary as Excel worksheet")]
     public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest, 
-        [ActionParameter] GlossaryWrapper glossary)
+        [ActionParameter] GlossaryWrapper glossary,
+        [ActionParameter] [Display("Overwrite existing sheet", 
+            Description = "Overwrite an existing sheet if it has the same title as the glossary")] 
+        bool? overwriteSheet)
     {
         static string? GetColumnValue(string columnName, GlossaryConceptEntry entry, string languageCode)
         {
@@ -281,7 +270,7 @@ public class WorksheetActions : BaseInvocable
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheet.Id}/range(address='{startColumn.ToExcelColumnAddress()}{startRow}:{endColumn.ToExcelColumnAddress()}{rowsToAdd.Count}')",
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
         addRowsRequest.AddJsonBody(new { values = rowsToAdd });
-        await new MicrosoftExcelClient().ExecuteWithHandling(addRowsRequest);
+        await Client.ExecuteWithHandling(addRowsRequest);
 
         return worksheet;
     }
@@ -418,12 +407,11 @@ public class WorksheetActions : BaseInvocable
 
         if (title == null)
         {
-            var client = new MicrosoftExcelClient();
             var getWorksheetRequest =
                 new MicrosoftExcelRequest(
                     $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}", Method.Get,
                     InvocationContext.AuthenticationCredentialsProviders);
-            var worksheet = await client.ExecuteWithHandling<WorksheetDto>(getWorksheetRequest);
+            var worksheet = await Client.ExecuteWithHandling<WorksheetDto>(getWorksheetRequest);
             title = worksheet.Name;
         }
         
