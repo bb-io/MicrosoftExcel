@@ -310,8 +310,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     [Action("Export glossary", Description = "Export glossary from Excel worksheet")]
     public async Task<GlossaryWrapper> ExportGlossary([ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
-        [ActionParameter] [Display("Title")] string? title,
-        [ActionParameter] [Display("Source description")] string? sourceDescription)
+        [ActionParameter] ExportGlossaryRequest input)
     {
         var rows = await GetUsedRange(workbookRequest, worksheetRequest);
         var maxLength = rows.Rows.Max(list => list.Count);
@@ -437,6 +436,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
             glossaryConceptEntries.Add(entry);
         }
 
+        var title = input.Title;
+        
         if (title == null)
         {
             var getWorksheetRequest =
@@ -450,7 +451,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var glossary = new Glossary(glossaryConceptEntries)
         {
             Title = title, 
-            SourceDescription = sourceDescription 
+            SourceDescription = input.SourceDescription 
                                 ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}" 
         };
 
