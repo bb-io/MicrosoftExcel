@@ -12,6 +12,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
+using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 
 namespace Apps.MicrosoftExcel.Actions;
@@ -227,9 +228,40 @@ public class WorksheetActions : MicrosoftExcelInvocable
         
         await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
         var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+        var sheetName = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)!;
+        
+        var listWorksheetsRequest = 
+            new MicrosoftExcelRequest($"/items/{workbookRequest.WorkbookId}/workbook/worksheets", Method.Get, 
+                InvocationContext.AuthenticationCredentialsProviders);
+        var listWorksheetsResponse = await Client.ExecuteWithHandling<ListWorksheetsResponse>(listWorksheetsRequest);
+        var worksheet = listWorksheetsResponse.Value.FirstOrDefault(sheet => sheet.Name == sheetName);
+        
+        if (worksheet != null && (overwriteSheet == null || overwriteSheet.Value == false))
+            sheetName += $" {DateTime.Now.ToString("dd-MM-yyyy")}";
 
-        var worksheet = await CreateWorksheet(workbookRequest,
-            new() { Name = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)! });
+        if (worksheet == null || (worksheet != null && (overwriteSheet == null || overwriteSheet.Value == false)))
+        {
+            const int maxAllowedSheetNameLength = 31;
+            
+            if (sheetName.Length > maxAllowedSheetNameLength)
+                sheetName = sheetName.Substring(0, maxAllowedSheetNameLength);
+                
+            worksheet = await CreateWorksheet(workbookRequest, new() { Name = sheetName });
+        }
+        else
+        {
+            var getUsedRangeRequest = new MicrosoftExcelRequest(
+                $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/usedRange", Method.Get, 
+                InvocationContext.AuthenticationCredentialsProviders);
+            var rangeAddress = await Client.ExecuteWithHandling<RangeAddressDto>(getUsedRangeRequest);
+            
+            var clearWorksheetRequest = new MicrosoftExcelRequest(
+                    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/range(address='{rangeAddress.Address}')/clear", 
+                    Method.Post, InvocationContext.AuthenticationCredentialsProviders)
+                .WithJsonBody(new { applyTo = "Contents" });
+
+            await Client.ExecuteWithHandling(clearWorksheetRequest);
+        }
 
         var languagesPresent = blackbirdGlossary.ConceptEntries
             .SelectMany(entry => entry.LanguageSections)
