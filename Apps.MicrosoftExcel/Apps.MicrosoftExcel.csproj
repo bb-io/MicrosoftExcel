@@ -8,11 +8,11 @@
 	<Version>1.2.2</Version>
 	<Description>Microsoft Excel is a spreadsheet editor developed by Microsoft</Description>
 	<AssemblyName>Apps.MicrosoftExcel</AssemblyName>
-	<LangVersion>11</LangVersion>
+	<LangVersion>12</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.3.2-alpha1" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.6.0" />
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.1" />
     <PackageReference Include="Blackbird.Applications.Sdk.Glossaries.Utils" Version="1.0.0-alpha11" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
