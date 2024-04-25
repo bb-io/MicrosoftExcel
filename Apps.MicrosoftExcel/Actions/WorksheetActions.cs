@@ -161,6 +161,20 @@ public class WorksheetActions : MicrosoftExcelInvocable
         return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
     }
 
+    [Action("Find sheet row", Description = "Providing a column address and a value, return row number where said value is located")]
+    public async Task<string?> FindRow([ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest, [ActionParameter]FindRowRequest input) 
+    {
+        var range = await GetUsedRange(workbookRequest, worksheetRequest);
+        var maxRowIndex = range.Rows.Count;
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{input.ColumnAddress}1:{input.ColumnAddress}{maxRowIndex}')",
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var columnValues = await Client.ExecuteWithHandling<List<string>>(request);
+        var index = columnValues.IndexOf(input.Value);
+        return index == -1 ? null : index+1.ToString();
+    }
+
     [Action("Download sheet CSV file", Description = "Download CSV file")]
     public async Task<FileResponse> DownloadCSV(
         [ActionParameter] WorkbookRequest workbookRequest,
