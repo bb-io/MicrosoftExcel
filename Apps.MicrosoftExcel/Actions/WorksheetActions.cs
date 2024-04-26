@@ -174,7 +174,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var allRows = rowValue.Values.ToList();
         var columnValues = allRows.Select(subList => subList.First()).ToList();
         var index = columnValues.IndexOf(input.Value);
-        index = index++;
+        index = index + 1;
         return index == 0 ? null : index.ToString();    
     }
 
