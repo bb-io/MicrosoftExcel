@@ -170,7 +170,9 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{input.ColumnAddress}1:{input.ColumnAddress}{maxRowIndex}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-        var columnValues = await Client.ExecuteWithHandling<List<string>>(request);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var allRows = rowValue.Values.ToList();
+        var columnValues = allRows.Select(subList => subList.First()).ToList();
         var index = columnValues.IndexOf(input.Value);
         return index == -1 ? null : index+1.ToString();
     }
