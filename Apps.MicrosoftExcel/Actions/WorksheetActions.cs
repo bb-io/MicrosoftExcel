@@ -174,7 +174,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var allRows = rowValue.Values.ToList();
         var columnValues = allRows.Select(subList => subList.First()).ToList();
         var index = columnValues.IndexOf(input.Value);
-        return index == -1 ? null : index+1.ToString();
+        index = index++;
+        return index == 0 ? null : index.ToString();    
     }
 
     [Action("Download sheet CSV file", Description = "Download CSV file")]
