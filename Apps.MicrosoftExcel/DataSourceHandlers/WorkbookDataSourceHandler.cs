@@ -17,8 +17,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftExcelClient();
-        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
-                       "$top=1000"; //$filter=fields/ContentType eq 'Document'&
+        var endpoint = "/root/search(q='.xls')?$top=100"; //$filter=fields/ContentType eq 'Document'&
         var filesDictionary = new Dictionary<string, string>();
         var filesAmount = 0;
 
@@ -31,8 +30,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
                 .Select(i => new { i.Id, Path = GetFilePath(i) })
-                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase) && 
-                Path.GetExtension(i.Path).Contains("xls"));
+                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
             foreach (var file in filteredFiles)
                 filesDictionary.Add(file.Id, file.Path);
