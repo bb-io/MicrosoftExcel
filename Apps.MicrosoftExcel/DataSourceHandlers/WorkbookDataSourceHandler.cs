@@ -17,7 +17,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftExcelClient();
-        var endpoint = "/root/search(q='.xls')?$top=100"; //$filter=fields/ContentType eq 'Document'&
+        var endpoint = "/root/search(q='.xls')?$select=name,id&$top=100"; //$filter=fields/ContentType eq 'Document'&
         var filesDictionary = new Dictionary<string, string>();
         var filesAmount = 0;
 
@@ -28,39 +28,39 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
             var files = await client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
             var filteredFiles = files.Value
-                .Select(i => new { i.Id, Path = GetFilePath(i) })
-                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
+                .Select(i => new { i.Id, i.Name })
+                .Where(i => i.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
             foreach (var file in filteredFiles)
-                filesDictionary.Add(file.Id, file.Path);
+                filesDictionary.Add(file.Id, file.Name);
             
             filesAmount += filteredFiles.Count();
             endpoint = files.ODataNextLink?.Split("me/drive")[1];
         } while (filesAmount < 20 && endpoint != null);
         
-        foreach (var file in filesDictionary)
-        {
-            var filePath = file.Value;
-            if (filePath.Length > 40)
-            {
-                var filePathParts = filePath.Split("/");
-                if (filePathParts.Length > 3)
-                {
-                    filePath = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
-                    filesDictionary[file.Key] = filePath;
-                }
-            }
-        }
+        //foreach (var file in filesDictionary)
+        //{
+        //    var filePath = file.Value;
+        //    if (filePath.Length > 40)
+        //    {
+        //        var filePathParts = filePath.Split("/");
+        //        if (filePathParts.Length > 3)
+        //        {
+        //            filePath = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
+        //            filesDictionary[file.Key] = filePath;
+        //        }
+        //    }
+        //}
 
         return filesDictionary;
     }
 
-    private string GetFilePath(FileMetadataDto file)
-    {
-        var parentPath = file.ParentReference.Path.Split("root:");
-        if (parentPath[1] == "")
-            return file.Name;
+    //private string GetFilePath(FileMetadataDto file)
+    //{
+    //    var parentPath = file.ParentReference.Path.Split("root:");
+    //    if (parentPath[1] == "")
+    //        return file.Name;
 
-        return $"{parentPath[1].Substring(1)}/{file.Name}";
-    }
+    //    return $"{parentPath[1].Substring(1)}/{file.Name}";
+    //}
 }
