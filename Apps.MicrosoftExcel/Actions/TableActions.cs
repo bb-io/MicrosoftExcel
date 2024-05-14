@@ -4,12 +4,11 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
-using System.Xml.Linq;
 
 namespace Apps.MicrosoftExcel.Actions
 {
     [ActionList]
-    public class TableActions : BaseInvocable
+    public class TableActions : MicrosoftExcelInvocable
     {
         public TableActions(InvocationContext invocationContext) : base(invocationContext)
         {
@@ -20,13 +19,14 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] TableRequest tableRequest)
         {
-            var client = new MicrosoftExcelClient();
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows",
                 Method.Get, InvocationContext.AuthenticationCredentialsProviders);
 
-            var result = await client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
-            return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
+            var result = await Client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
+            var allRows = result.Value.ToList();
+            return new RowsDto() { Rows = allRows.Select(x => x.Values.First()).ToList() };
+            //return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
         }
 
         [Action("Get table row", Description = "Get table row")]
@@ -35,12 +35,11 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] TableRequest tableRequest,
         [ActionParameter] GetTableRowRequest tableRowRequest)
         {
-            var client = new MicrosoftExcelClient();
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/itemAt(index={tableRowRequest.RowIndex})",
                 Method.Get, InvocationContext.AuthenticationCredentialsProviders);
 
-            var result = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+            var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
             return new RowDto() { Row = result.Values.First() };
         }
 
@@ -51,7 +50,6 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] GetTableRowRequest tableRowRequest,
         [ActionParameter] UpdateRowRequest updateTableRowRequest)
         {
-            var client = new MicrosoftExcelClient();
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/itemAt(index={tableRowRequest.RowIndex})",
                 Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
@@ -62,7 +60,7 @@ namespace Apps.MicrosoftExcel.Actions
                     updateTableRowRequest.Row
                 }
             });
-            var result = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+            var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
             return new RowDto() { Row = result.Values.First() };
         }
 
@@ -72,7 +70,6 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] CreateTableRequest createTableRequest)
         {
-            var client = new MicrosoftExcelClient();
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/tables/add",
                 Method.Post, InvocationContext.AuthenticationCredentialsProviders);
@@ -81,7 +78,7 @@ namespace Apps.MicrosoftExcel.Actions
                 address = $"{createTableRequest.ColumnRow1}:{createTableRequest.ColumnRow2}",
                 hasHeaders = createTableRequest.HasHeaders ?? true
             });
-            return await client.ExecuteWithHandling<TableDto>(request);
+            return await Client.ExecuteWithHandling<TableDto>(request);
         }
 
         [Action("Add new table row", Description = "Add new table row")]
@@ -91,7 +88,6 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] TableRowOptionalRequest rowRequest,
         [ActionParameter] UpdateRowRequest updateRowRequest)
         {
-            var client = new MicrosoftExcelClient();
             var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/add",
                 Method.Post, InvocationContext.AuthenticationCredentialsProviders);
@@ -100,7 +96,7 @@ namespace Apps.MicrosoftExcel.Actions
                 index = rowRequest.RowIndex,
                 values = new[] { updateRowRequest.Row }
             });
-            var result = await client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+            var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
             return new RowDto() { Row = result.Values.First() };
         }
     }

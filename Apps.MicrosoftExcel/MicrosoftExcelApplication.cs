@@ -2,13 +2,20 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Common.Metadata;
 
 namespace Apps.MicrosoftExcel;
 
-public class MicrosoftExcelApplication : BaseInvocable, IApplication
+public class MicrosoftExcelApplication : BaseInvocable, IApplication, ICategoryProvider
 {
     private readonly Dictionary<Type, object> _typesInstances;
 
+    public IEnumerable<ApplicationCategory> Categories
+    {
+        get => [ApplicationCategory.Microsoft365Apps, ApplicationCategory.DatabaseAndSpreadsheet, ApplicationCategory.ProjectManagementAndProductivity];
+        set { }
+    }
+    
     public MicrosoftExcelApplication(InvocationContext invocationContext) : base(invocationContext)
     {
         _typesInstances = CreateTypesInstances();
