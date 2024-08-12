@@ -145,7 +145,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList(),
+        RowsCount = allRows.Count};
     }
 
     [Action("Get sheet used range", Description = "Get used range in a sheet")]
@@ -158,7 +159,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList() };
+        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList(), 
+        RowsCount = allRows.Count};
     }
 
     [Action("Find sheet row", Description = "Providing a column address and a value, return row number where said value is located")]
