@@ -1,4 +1,4 @@
-# Blackbird.io Microsoft Excel
+# Blackbird.io Microsoft 365 Excel
 
 Blackbird is the new automation backbone for the language technology industry. Blackbird provides enterprise-scale automation and orchestration with a simple no-code/low-code platform. Blackbird enables ambitious organizations to identify, vet and automate as many processes as possible. Not just localization workflows, but any business and IT process. This repository represents an application that is deployable on Blackbird and usable inside the workflow editor.
 
@@ -6,7 +6,7 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 <!-- begin docs -->
 
-Microsoft Excel is a spreadsheet software that enables users to organize, analyze, and visualize data using tabular grids. It offers a range of features, including formulas, charts, and formatting options, making it a versatile tool for various data-related tasks and business applications.
+Microsoft 365 Excel is a spreadsheet software that enables users to organize, analyze, and visualize data using tabular grids. It offers a range of features, including formulas, charts, and formatting options, making it a versatile tool for various data-related tasks and business applications.
 
 ## Actions
 
