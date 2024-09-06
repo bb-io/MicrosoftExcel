@@ -6,7 +6,7 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 <!-- begin docs -->
 
-Microsoft Excel is a spreadsheet software that enables users to organize, analyze, and visualize data using tabular grids. It offers a range of features, including formulas, charts, and formatting options, making it a versatile tool for various data-related tasks and business applications.
+Microsoft 365 Excel is a spreadsheet software that enables users to organize, analyze, and visualize data using tabular grids. It offers a range of features, including formulas, charts, and formatting options, making it a versatile tool for various data-related tasks and business applications.
 
 ## Actions
 
