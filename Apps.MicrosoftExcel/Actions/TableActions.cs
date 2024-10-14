@@ -15,7 +15,7 @@ namespace Apps.MicrosoftExcel.Actions
         }
 
         [Action("List table rows", Description = "List table rows")]
-        public async Task<RowsDto> ListTableRows(
+        public async Task<SimplerRowsDto> ListTableRows(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] TableRequest tableRequest)
         {
@@ -25,8 +25,7 @@ namespace Apps.MicrosoftExcel.Actions
 
             var result = await Client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
             var allRows = result.Value.ToList();
-            return new RowsDto() { Rows = allRows.Select(x => x.Values.First()).ToList() };
-            //return new RowsDto() { Rows = result.Value.Select(x => x.Values.First()).ToList() };
+            return new SimplerRowsDto() { Rows = allRows.Select(x => x.Values.First()).ToList() };
         }
 
         [Action("Get table row", Description = "Get table row")]
