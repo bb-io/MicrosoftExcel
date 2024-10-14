@@ -14,6 +14,7 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
+using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -79,7 +80,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] InsertRowRequest insertRowRequest)
     {        
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
-        var newRowIndex = range.Rows.First().All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
+        var newRowIndex = range.Rows.First().Values.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
         
@@ -139,15 +140,21 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         if (!rangeRequest.Range.IsValidExcelRange())
             throw new Exception($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
-        
+        var (startColumn, startCell) = rangeRequest.Range.Split(":")[0].ToExcelColumnAndRow();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rangeRequest.Range}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList(),
-        RowsCount = allRows.Count};
+        var rangeIDs = GetIdsRange(startCell, startCell + rowValue.Values.Count() - 1);
+
+        return new RowsDto()
+        {
+            Rows = rangeIDs.Zip(allRows, (id, rowvalues) => new _row { RowId = id, Values = rowvalues }).ToList(),
+            RowsCount = (double)rowValue.Values.Count()
+        };
     }
+
 
     [Action("Get sheet used range", Description = "Get used range in a sheet")]
     public async Task<RowsDto> GetUsedRange(
@@ -159,8 +166,13 @@ public class WorksheetActions : MicrosoftExcelInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new RowsDto() { Rows = allRows.Select(x => x.ToList()).ToList(), 
-        RowsCount = allRows.Count};
+        var rangeIDs = GetIdsRange(1, rowValue.Values.Count());
+
+        return new RowsDto()
+        {
+            Rows = rangeIDs.Zip(allRows, (id, rowvalues) => new _row { RowId = id, Values = rowvalues }).ToList(),
+            RowsCount = (double)rowValue.Values.Count()
+        };
     }
 
     [Action("Find sheet row", Description = "Providing a column address and a value, return row number where said value is located")]
@@ -189,7 +201,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var csv = new StringBuilder();
         rows.Rows.ForEach(row =>
         {
-            csv.AppendLine(string.Join(",", row));
+            csv.AppendLine(string.Join(",", row.Values));
         });
 
         using var stream = new MemoryStream(Encoding.ASCII.GetBytes(csv.ToString()));
@@ -197,8 +209,34 @@ public class WorksheetActions : MicrosoftExcelInvocable
         return new(csvFile);
     }
 
+    #region Utils
+
+    private List<int> GetIdsRange(int start, int end)
+    {
+        var myList = new List<int>();
+        for (var i = start; i <= end; i++)
+        {
+            myList.Add(i);
+        }
+        return myList;
+    }
+
+    private async Task<SimplerRowsDto> GetGlossaryUsedRange(WorkbookRequest workbookRequest, WorksheetRequest worksheetRequest)
+    {
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var allRows = rowValue.Values.ToList();
+        return new SimplerRowsDto()        {
+            Rows = allRows.Select(x => x.ToList()).ToList()
+        };
+    }
+    #endregion
+
+
     #region Glossaries
-    
+
     private const string Term = "Term";
     private const string Variations = "Variations";
     private const string Notes = "Notes";
@@ -331,7 +369,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] ExportGlossaryRequest input)
     {
-        var rows = await GetUsedRange(workbookRequest, worksheetRequest);
+        var rows = await GetGlossaryUsedRange(workbookRequest, worksheetRequest);
         var maxLength = rows.Rows.Max(list => list.Count);
 
         var parsedGlossary = new Dictionary<string, List<string>>();

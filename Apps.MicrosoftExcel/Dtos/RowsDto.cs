@@ -9,9 +9,16 @@ namespace Apps.MicrosoftExcel.Dtos
 {
     public class RowsDto
     {
-        public List<List<string>> Rows { get; set; }
+        public List<_row> Rows { get; set; }
 
-        [Display("Rows Count")]
+        [Display("Rows count")]
         public double RowsCount { get; set; }
+    }
+
+    public class _row
+    {
+        [Display("Row ID")]
+        public int RowId { get; set; }
+        public List<string> Values { get; set; }
     }
 }
