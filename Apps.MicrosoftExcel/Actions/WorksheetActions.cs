@@ -42,6 +42,19 @@ public class WorksheetActions : MicrosoftExcelInvocable
         return new CellDto(){ Value = cellValue.Values.First().First() };
     }
 
+    [Action("Get sheet cell sharepoint test 2", Description = "Get sheet cell sharepoint test 2")]
+    public async Task<CellDto> GetSharePointCell(
+        [ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest,
+        [ActionParameter] GetCellRequest cellRequest)
+    {
+        var request = new MicrosoftExcelRequest(
+            $"/drive/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var cellValue = await new MicrosoftExcelSharepointClient(InvocationContext.AuthenticationCredentialsProviders).ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        return new CellDto() { Value = cellValue.Values.First().First() };
+    }
+
     [Action("Update sheet cell", Description = "Update cell by address")]
     public async Task<CellDto> UpdateCell(
         [ActionParameter] WorkbookRequest workbookRequest,
