@@ -1,4 +1,5 @@
 ﻿using Apps.MicrosoftExcel.Dtos;
+using Apps.MicrosoftExcel.Models.Requests;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -9,8 +10,12 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers;
 
 public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
 {
-    public WorkbookDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
+    private WorkbookRequest WorkbookRequest { get; set; }
+
+    public WorkbookDataSourceHandler(InvocationContext invocationContext, 
+        [ActionParameter] WorkbookRequest workbookRequest) : base(invocationContext)
     {
+        WorkbookRequest = workbookRequest;
     }
 
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
@@ -52,7 +57,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         //    }
         //}
 
-        return filesDictionary;
+        return filesDictionary.ToDictionary(x => x.Key, v => $"{v.Value}_{WorkbookRequest.SiteName}");
     }
 
     //private string GetFilePath(FileMetadataDto file)

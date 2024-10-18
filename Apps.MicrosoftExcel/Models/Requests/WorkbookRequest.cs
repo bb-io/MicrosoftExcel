@@ -14,5 +14,8 @@ namespace Apps.MicrosoftExcel.Models.Requests
         [Display("Workbook", Description = "Your Excel file")]
         [DataSource(typeof(WorkbookDataSourceHandler))]
         public string WorkbookId { get; set; }
+
+        [Display("Sharepoint site name", Description = "Sharepoint site name")]
+        public string? SiteName { get; set; }
     }
 }
