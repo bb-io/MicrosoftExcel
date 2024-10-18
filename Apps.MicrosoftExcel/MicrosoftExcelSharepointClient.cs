@@ -61,7 +61,7 @@ public class MicrosoftExcelSharepointClient : RestClient
         do
         {
             var request = new RestRequest(endpoint);
-            request.AddHeader("Authorization", $"Bearer {accessToken}");
+            request.AddHeader("Authorization", $"{accessToken}");
             var response = client.Get(request);
             var resultSites = response.Content.DeserializeResponseContent<ListWrapper<SiteDto>>();
             siteId = resultSites.Value.FirstOrDefault(site => site.DisplayName == siteDisplayName)?.Id;
