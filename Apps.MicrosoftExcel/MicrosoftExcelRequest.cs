@@ -22,7 +22,7 @@ public class MicrosoftExcelRequest : RestRequest
         if (IsOneDriveWorkbook(workbookRequest.WorkbookId, authHeader))
             return "/me/drive/" + endpoint.TrimStart('/');
 
-        return $"/site/{GetSiteId(authHeader, workbookRequest.SiteName)}/drive/{endpoint.TrimStart('/')}";
+        return $"/sites/{GetSiteId(authHeader, workbookRequest.SiteName)}/drive/{endpoint.TrimStart('/')}";
     }
 
     public static string? GetSiteId(string accessToken, string siteDisplayName)
