@@ -38,5 +38,5 @@ public class FileMetadataDto
     //public DateTime? LastModifiedDateTime { get; set; }
     
     //[Display("Parent reference")]
-    //public ParentReferenceDto? ParentReference { get; set; }
+    public ParentReferenceDto? ParentReference { get; set; }
 }

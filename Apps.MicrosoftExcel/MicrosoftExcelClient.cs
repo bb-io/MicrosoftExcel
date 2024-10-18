@@ -17,7 +17,7 @@ public class MicrosoftExcelClient : RestClient
 
     private static Uri GetBaseUrl()
     {
-        return new Uri("https://graph.microsoft.com/v1.0/me/drive");
+        return new Uri("https://graph.microsoft.com/v1.0"); //me/drive or sites/{siteId}
     }
     
     public async Task<T> ExecuteWithHandling<T>(RestRequest request)

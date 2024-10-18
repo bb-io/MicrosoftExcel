@@ -1,10 +1,5 @@
 ﻿using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Apps.MicrosoftExcel.Dtos;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
@@ -34,7 +29,7 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers
             var worksheetsDictionary = new Dictionary<string, string>();
 
             var request = new MicrosoftExcelRequest(endpoint, Method.Get,
-                    InvocationContext.AuthenticationCredentialsProviders);
+                    InvocationContext.AuthenticationCredentialsProviders, WorkbookRequest);
             request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
             var files = await client.ExecuteWithHandling<ListWrapper<WorksheetDto>>(request);
             var filteredFiles = files.Value
