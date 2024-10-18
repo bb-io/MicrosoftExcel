@@ -1,10 +1,8 @@
-﻿using Apps.MicrosoftExcel.Converters;
-using Blackbird.Applications.Sdk.Common;
-using Newtonsoft.Json;
+﻿using Blackbird.Applications.Sdk.Common;
 
 namespace Apps.MicrosoftExcel.Dtos;
 
-public class FileMetadataDto
+public class SharePointFileMetadataDto
 {
     [Display("File ID")]
     public string Id { get; set; }
@@ -37,6 +35,6 @@ public class FileMetadataDto
     //[Display("Last modified date and time")]
     //public DateTime? LastModifiedDateTime { get; set; }
     
-    //[Display("Parent reference")]
-    //public ParentReferenceDto? ParentReference { get; set; }
+    [Display("Parent reference")]
+    public ParentReferenceDto? ParentReference { get; set; }
 }

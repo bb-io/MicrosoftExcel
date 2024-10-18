@@ -83,7 +83,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var request = new RestRequest(endpoint, Method.Get);
             request.AddHeader("Authorization", InvocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
             request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-            var files = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
+            var files = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<SharePointFileMetadataDto>>>(request);
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
                 .Select(i => new { i.Id, Path = GetFilePath(i) })
@@ -112,7 +112,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         return filesDictionary;
     }
 
-    private string GetFilePath(FileMetadataDto file)
+    private string GetFilePath(SharePointFileMetadataDto file)
     {
         var parentPath = file.ParentReference.Path.Split("root:");
         if (parentPath[1] == "")
