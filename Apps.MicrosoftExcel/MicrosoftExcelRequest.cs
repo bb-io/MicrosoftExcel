@@ -22,10 +22,10 @@ public class MicrosoftExcelRequest : RestRequest
         if (IsOneDriveWorkbook(workbookRequest.WorkbookId, authHeader))
             return "/me/drive/" + endpoint.TrimStart('/');
 
-        return $"/site/{GetSiteId(authHeader, workbookRequest.SiteName)}/{endpoint.TrimStart('/')}";
+        return $"/site/{GetSiteId(authHeader, workbookRequest.SiteName)}/drive/{endpoint.TrimStart('/')}";
     }
 
-    private static string? GetSiteId(string accessToken, string siteDisplayName)
+    public static string? GetSiteId(string accessToken, string siteDisplayName)
     {
         var client = new RestClient(new RestClientOptions("https://graph.microsoft.com/v1.0"));
         var endpoint = "/sites?search=*";

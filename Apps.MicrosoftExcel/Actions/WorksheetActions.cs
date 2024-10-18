@@ -14,7 +14,6 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace Apps.MicrosoftExcel.Actions;
 
