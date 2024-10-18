@@ -41,7 +41,8 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                 filesDictionary.Add(file.Id, file.Name);
             
             filesAmount += filteredFiles.Count();
-            endpoint = $"/me/drive{files.ODataNextLink?.Split("me/drive")[1]}";
+            var nextUrl = files.ODataNextLink?.Split("me/drive")[1];
+            endpoint = nextUrl != null ? $"/me/drive{nextUrl}" : null;
         } while (filesAmount < 20 && endpoint != null);
 
         //foreach (var file in filesDictionary)
@@ -61,7 +62,7 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         if (!string.IsNullOrEmpty(WorkbookRequest?.SiteName))
         {
             var sharePointWorkbooks = await GetSharePointWorkbooks(context.SearchString, WorkbookRequest.SiteName);
-            foreach(var sharePointWorkbook in sharePointWorkbooks)
+            foreach (var sharePointWorkbook in sharePointWorkbooks)
             {
                 filesDictionary.Add(sharePointWorkbook.Key, sharePointWorkbook.Value);
             }
