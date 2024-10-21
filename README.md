@@ -51,6 +51,8 @@ To utilize the **Export glossary** action, ensure that the Excel worksheet mirro
 ## SharePoint documents support
 In all actions you can specify optional input parameter "SharePoint site name" in order to use excel files from SharePoint site in "Workbook" parameter dropdown. 
 
+![SharePointSupport1](/image/README/SharePointSupport1.png) ![SharePointSupport2](/image/README/SharePointSupport2.png)
+
 ## Feedback
 
 Do you want to use this app or do you have feedback on our implementation? Reach out to us using the [established channels](https://www.blackbird.io/) or create an issue.
