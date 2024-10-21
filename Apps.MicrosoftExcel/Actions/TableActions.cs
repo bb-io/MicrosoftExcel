@@ -21,7 +21,7 @@ namespace Apps.MicrosoftExcel.Actions
         {
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows",
-                Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+                Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
 
             var result = await Client.ExecuteWithHandling<ListWrapper<MultipleListWrapper<List<string>>>>(request);
             var allRows = result.Value.ToList();
@@ -36,7 +36,7 @@ namespace Apps.MicrosoftExcel.Actions
         {
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/itemAt(index={tableRowRequest.RowIndex})",
-                Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+                Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
 
             var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
             return new RowDto() { Row = result.Values.First() };
@@ -51,7 +51,7 @@ namespace Apps.MicrosoftExcel.Actions
         {
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/itemAt(index={tableRowRequest.RowIndex})",
-                Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
+                Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             request.AddJsonBody(new
             {
                 values = new[]
@@ -71,7 +71,7 @@ namespace Apps.MicrosoftExcel.Actions
         {
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/tables/add",
-                Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+                Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             request.AddJsonBody(new
             {
                 address = $"{createTableRequest.ColumnRow1}:{createTableRequest.ColumnRow2}",
@@ -89,7 +89,7 @@ namespace Apps.MicrosoftExcel.Actions
         {
             var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/tables/{tableRequest.Table}/rows/add",
-                Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+                Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             request.AddJsonBody(new
             {
                 index = rowRequest.RowIndex,

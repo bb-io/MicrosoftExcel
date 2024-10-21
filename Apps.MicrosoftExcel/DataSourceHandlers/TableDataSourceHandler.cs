@@ -29,7 +29,7 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers
             var worksheetsDictionary = new Dictionary<string, string>();
 
             var request = new MicrosoftExcelRequest(endpoint, Method.Get,
-                    InvocationContext.AuthenticationCredentialsProviders);
+                    InvocationContext.AuthenticationCredentialsProviders, WorkbookRequest);
             request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
             var files = await client.ExecuteWithHandling<ListWrapper<TableDto>>(request);
             var filteredFiles = files.Value

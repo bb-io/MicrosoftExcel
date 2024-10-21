@@ -1,5 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
 namespace Apps.MicrosoftExcel.Connections;
@@ -11,8 +12,8 @@ public class ConnectionValidator : IConnectionValidator
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftExcelClient();
-        var request = new MicrosoftExcelRequest("", Method.Get, authenticationCredentialsProviders);
-        
+        var request = new RestRequest("/me/drive", Method.Get);
+        request.AddHeader("Authorization", authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
         try
         {
             await client.ExecuteWithHandling(request);

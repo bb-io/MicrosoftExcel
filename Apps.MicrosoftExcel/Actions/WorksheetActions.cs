@@ -14,7 +14,6 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -37,7 +36,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var cellValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new CellDto(){ Value = cellValue.Values.First().First() };
     }
@@ -51,7 +50,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
-            Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         request.AddJsonBody(new
         {
             values = new[] { new[] { updateCellRequest.Value } }
@@ -68,7 +67,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowRequest.Column1}{rowRequest.RowIndex}:{rowRequest.Column2}{rowRequest.RowIndex}')",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = rowValue.Values.First() };
     }
@@ -108,7 +107,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var endColumn = startColumn + updateRowRequest.Row.Count - 1;
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn.ToExcelColumnAddress()}{row}:{endColumn.ToExcelColumnAddress()}{row}')",
-            Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         request.AddJsonBody(new
         {
             values = new[] { updateRowRequest.Row }
@@ -124,7 +123,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets",
-            Method.Post, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         request.AddJsonBody(new
         {
             name = createWorksheetRequest.Name
@@ -143,7 +142,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var (startColumn, startCell) = rangeRequest.Range.Split(":")[0].ToExcelColumnAndRow();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rangeRequest.Range}')",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         var rangeIDs = GetIdsRange(startCell, startCell + rowValue.Values.Count() - 1);
@@ -163,7 +162,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         var rangeIDs = GetIdsRange(1, rowValue.Values.Count());
@@ -183,7 +182,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var maxRowIndex = range.Rows.Count;
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{input.ColumnAddress}1:{input.ColumnAddress}{maxRowIndex}')",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         var columnValues = allRows.Select(subList => subList.First()).ToList();
@@ -225,7 +224,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
-            Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
         return new SimplerRowsDto()        {
@@ -289,7 +288,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         
         var listWorksheetsRequest = 
             new MicrosoftExcelRequest($"/items/{workbookRequest.WorkbookId}/workbook/worksheets", Method.Get, 
-                InvocationContext.AuthenticationCredentialsProviders);
+                InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var listWorksheetsResponse = await Client.ExecuteWithHandling<ListWorksheetsResponse>(listWorksheetsRequest);
         var worksheet = listWorksheetsResponse.Value.FirstOrDefault(sheet => sheet.Name == sheetName);
         
@@ -309,12 +308,12 @@ public class WorksheetActions : MicrosoftExcelInvocable
         {
             var getUsedRangeRequest = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/usedRange", Method.Get, 
-                InvocationContext.AuthenticationCredentialsProviders);
+                InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             var rangeAddress = await Client.ExecuteWithHandling<RangeAddressDto>(getUsedRangeRequest);
             
             var clearWorksheetRequest = new MicrosoftExcelRequest(
                     $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/range(address='{rangeAddress.Address}')/clear", 
-                    Method.Post, InvocationContext.AuthenticationCredentialsProviders)
+                    Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest)
                 .WithJsonBody(new { applyTo = "Contents" });
 
             await Client.ExecuteWithHandling(clearWorksheetRequest);
@@ -357,7 +356,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var endColumn = startColumn + rowsToAdd[0].Count - 1;
         var addRowsRequest = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheet.Id}/range(address='{startColumn.ToExcelColumnAddress()}{startRow}:{endColumn.ToExcelColumnAddress()}{rowsToAdd.Count}')",
-            Method.Patch, InvocationContext.AuthenticationCredentialsProviders);
+            Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         addRowsRequest.AddJsonBody(new { values = rowsToAdd });
         await Client.ExecuteWithHandling(addRowsRequest);
 
@@ -500,7 +499,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
             var getWorksheetRequest =
                 new MicrosoftExcelRequest(
                     $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}", Method.Get,
-                    InvocationContext.AuthenticationCredentialsProviders);
+                    InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             var worksheet = await Client.ExecuteWithHandling<WorksheetDto>(getWorksheetRequest);
             title = worksheet.Name;
         }
