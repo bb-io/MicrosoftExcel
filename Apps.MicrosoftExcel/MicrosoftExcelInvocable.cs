@@ -24,7 +24,7 @@ public class MicrosoftExcelInvocable : BaseInvocable
 
     protected void ValidateCellAddressParameter(GetCellRequest cellAddress)
     {
-        string errorMessage = "Invalid cell address format. Cell example: \"A1\"";
+        string errorMessage = "Invalid cell address format. Cell address example: \"A1\"";
         var firstAddressChar = cellAddress.CellAddress.FirstOrDefault();
         var lastAddressChar = cellAddress.CellAddress.LastOrDefault();
         if (firstAddressChar == default || !char.IsLetter(firstAddressChar) || !char.IsUpper(firstAddressChar) ||
