@@ -34,6 +34,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] GetCellRequest cellRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
+        ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
@@ -48,6 +50,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] GetCellRequest cellRequest,
         [ActionParameter] UpdateCellRequest updateCellRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
+        ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
@@ -65,6 +69,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] GetRowRequest rowRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowRequest.Column1}{rowRequest.RowIndex}:{rowRequest.Column2}{rowRequest.RowIndex}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
@@ -77,7 +82,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] InsertRowRequest insertRowRequest)
-    {        
+    {
+        ValidateWorksheetParameter(worksheetRequest);
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
         var newRowIndex = range.Rows.First().Values.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
@@ -103,6 +109,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] UpdateRowRequest updateRowRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
         var (startColumn, row) = updateRowRequest.CellAddress.ToExcelColumnAndRow();
         var endColumn = startColumn + updateRowRequest.Row.Count - 1;
         var request = new MicrosoftExcelRequest(
@@ -137,6 +144,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     [ActionParameter] WorksheetRequest worksheetRequest,
     [ActionParameter] GetRangeRequest rangeRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
         if (!rangeRequest.Range.IsValidExcelRange())
             throw new Exception($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
         var (startColumn, startCell) = rangeRequest.Range.Split(":")[0].ToExcelColumnAndRow();
@@ -160,6 +168,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/usedRange",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
@@ -178,6 +187,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     public async Task<string?> FindRow([ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest, [ActionParameter]FindRowRequest input) 
     {
+        ValidateWorksheetParameter(worksheetRequest);
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
         var maxRowIndex = range.Rows.Count;
         var request = new MicrosoftExcelRequest(
@@ -196,6 +206,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest)
     {
+        ValidateWorksheetParameter(worksheetRequest);
         var rows = await GetUsedRange(workbookRequest, worksheetRequest);
         var csv = new StringBuilder();
         rows.Rows.ForEach(row =>
