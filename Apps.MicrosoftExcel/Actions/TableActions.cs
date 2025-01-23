@@ -69,6 +69,7 @@ namespace Apps.MicrosoftExcel.Actions
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] CreateTableRequest createTableRequest)
         {
+            ValidateWorksheetParameter(worksheetRequest);
             var request = new MicrosoftExcelRequest(
                 $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/tables/add",
                 Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
