@@ -16,9 +16,19 @@ public class MicrosoftExcelInvocable : BaseInvocable
 
     protected void ValidateWorksheetParameter(WorksheetRequest worksheetRequest)
     {
-        string errorMessage = "Invalid worksheet ID. Worksheet ID example: \"{00000000-0001-0000-0000-000000000000}\"";
+        string errorMessage = "Invalid worksheet ID. Worksheet ID example:  \"{00000000-0001-0000-0000-000000000000}\"";
         if (worksheetRequest.Worksheet.FirstOrDefault() != '{' || worksheetRequest.Worksheet.LastOrDefault() != '}' ||
-            Guid.TryParse(worksheetRequest.Worksheet.Substring(1, worksheetRequest.Worksheet.Length - 2), out var _))
+            !Guid.TryParse(worksheetRequest.Worksheet.Substring(1, worksheetRequest.Worksheet.Length - 2), out var _))
+            throw new PluginMisconfigurationException(errorMessage);
+    }
+
+    protected void ValidateCellAddressParameter(GetCellRequest cellAddress)
+    {
+        string errorMessage = "Invalid cell address format. Cell example: \"A1\"";
+        var firstAddressChar = cellAddress.CellAddress.FirstOrDefault();
+        var lastAddressChar = cellAddress.CellAddress.LastOrDefault();
+        if (firstAddressChar == default || !char.IsLetter(firstAddressChar) || !char.IsUpper(firstAddressChar) ||
+            lastAddressChar == default || !char.IsDigit(lastAddressChar))
             throw new PluginMisconfigurationException(errorMessage);
     }
 }

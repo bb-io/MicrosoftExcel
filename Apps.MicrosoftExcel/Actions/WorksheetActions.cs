@@ -35,6 +35,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] GetCellRequest cellRequest)
     {
         ValidateWorksheetParameter(worksheetRequest);
+        ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
@@ -50,6 +51,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] UpdateCellRequest updateCellRequest)
     {
         ValidateWorksheetParameter(worksheetRequest);
+        ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
