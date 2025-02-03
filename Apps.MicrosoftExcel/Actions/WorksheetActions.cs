@@ -14,6 +14,7 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -146,7 +147,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
     {
         ValidateWorksheetParameter(worksheetRequest);
         if (!rangeRequest.Range.IsValidExcelRange())
-            throw new Exception($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
+            throw new PluginMisconfigurationException($"{rangeRequest.Range} is not a valid range. Please use the Excel format e.g. 'A1:F9'.");
         var (startColumn, startCell) = rangeRequest.Range.Split(":")[0].ToExcelColumnAndRow();
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rangeRequest.Range}')",

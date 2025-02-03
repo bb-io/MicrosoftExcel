@@ -1,5 +1,6 @@
 ﻿using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Extensions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 using System.Linq;
@@ -46,6 +47,6 @@ public class MicrosoftExcelClient : RestClient
     private Exception ConfigureErrorException(string responseContent)
     {
         var error = responseContent.DeserializeResponseContent<ErrorDto>();
-        return new($"{error.Error.Code}: {error.Error.Message}");
+        throw new PluginApplicationException($"{error.Error.Code}: {error.Error.Message}");
     }
 }
