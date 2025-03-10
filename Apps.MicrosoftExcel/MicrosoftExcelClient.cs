@@ -13,7 +13,8 @@ public class MicrosoftExcelClient : RestClient
     public MicrosoftExcelClient() 
         : base(new RestClientOptions
         {
-            ThrowOnAnyError = false, BaseUrl = GetBaseUrl() 
+            ThrowOnAnyError = false, BaseUrl = GetBaseUrl() ,
+            MaxTimeout = 200000
         }) { }
 
     private static Uri GetBaseUrl()
@@ -47,6 +48,10 @@ public class MicrosoftExcelClient : RestClient
     private Exception ConfigureErrorException(string responseContent)
     {
         var error = responseContent.DeserializeResponseContent<ErrorDto>();
-        throw new PluginApplicationException($"{error.Error.Code}: {error.Error.Message}");
+        if (error.Error.Code?.Equals("InternalServerError", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
+        }
+        return new PluginApplicationException($"{error.Error.Code} - {error.Error.Message}");
     }
 }
