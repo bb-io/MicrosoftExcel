@@ -32,10 +32,19 @@ public class MicrosoftExcelClient : RestClient
     {
         var response = await ExecuteAsync(request);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+            (!string.IsNullOrEmpty(response.Content) && response.Content.Contains("internal server error")))
         {
-            int timeout = int.Parse(response.Headers.Where(x => x.Name == "Retry-After").First().Value.ToString());
-            await Task.Delay((timeout + 1) * 1000);
+            var retryAfterHeader = response.Headers.FirstOrDefault(x => x.Name == "Retry-After");
+            if (retryAfterHeader != null && !string.IsNullOrEmpty(retryAfterHeader.Value?.ToString()))
+            {
+                int timeout = int.Parse(retryAfterHeader.Value.ToString());
+                await Task.Delay((timeout + 1) * 1000);
+            }
+            else
+            {
+                await Task.Delay(3000);
+            }
             return await ExecuteWithHandling(request);
         }
 
