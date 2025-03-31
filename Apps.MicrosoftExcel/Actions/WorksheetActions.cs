@@ -295,7 +295,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         }
         
         await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
-        var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+        var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
         var sheetName = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)!;
         
         var listWorksheetsRequest = 
@@ -523,7 +523,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                 ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}" 
         };
 
-        var glossaryStream = glossary.ConvertToTBX();
+        var glossaryStream = glossary.ConvertToTbx();
         var glossaryFileReference =
             await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
         return new() { Glossary = glossaryFileReference };
