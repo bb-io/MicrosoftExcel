@@ -36,6 +36,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] GetCellRequest cellRequest)
     {
         ValidateWorksheetParameter(worksheetRequest);
+        cellRequest.CellAddress = cellRequest.CellAddress.ToUpper();
         ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
@@ -52,6 +53,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         [ActionParameter] UpdateCellRequest updateCellRequest)
     {
         ValidateWorksheetParameter(worksheetRequest);
+        cellRequest.CellAddress = cellRequest.CellAddress.ToUpper();
         ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
@@ -295,7 +297,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         }
         
         await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
-        var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+        var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
         var sheetName = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)!;
         
         var listWorksheetsRequest = 
@@ -523,7 +525,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                 ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}" 
         };
 
-        var glossaryStream = glossary.ConvertToTBX();
+        var glossaryStream = glossary.ConvertToTbx();
         var glossaryFileReference =
             await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
         return new() { Glossary = glossaryFileReference };

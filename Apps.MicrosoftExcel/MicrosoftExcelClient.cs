@@ -2,19 +2,20 @@
 using Apps.MicrosoftExcel.Extensions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.RestSharp;
 using RestSharp;
 using System.Linq;
 using System.Threading;
 
 namespace Apps.MicrosoftExcel;
 
-public class MicrosoftExcelClient : RestClient
+public class MicrosoftExcelClient : BlackBirdRestClient
 {
     public MicrosoftExcelClient() 
         : base(new RestClientOptions
         {
             ThrowOnAnyError = false, BaseUrl = GetBaseUrl() ,
-            MaxTimeout = 200000
+            Timeout = TimeSpan.FromMilliseconds(200000)
         }) { }
 
     private static Uri GetBaseUrl()
@@ -30,37 +31,49 @@ public class MicrosoftExcelClient : RestClient
     
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
-        var response = await ExecuteAsync(request);
-
-        if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
-            (!string.IsNullOrEmpty(response.Content) && response.Content.Contains("internal server error")))
+        var response = new RestResponse();
+        try
         {
-            var retryAfterHeader = response.Headers.FirstOrDefault(x => x.Name == "Retry-After");
-            if (retryAfterHeader != null && !string.IsNullOrEmpty(retryAfterHeader.Value?.ToString()))
+            response = await ExecuteAsync(request);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
+                (!string.IsNullOrEmpty(response.Content) && response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase)))
             {
-                int timeout = int.Parse(retryAfterHeader.Value.ToString());
-                await Task.Delay((timeout + 1) * 1000);
+                var retryAfterHeader = response.Headers.FirstOrDefault(x => x.Name == "Retry-After");
+                if (retryAfterHeader != null && !string.IsNullOrEmpty(retryAfterHeader.Value?.ToString()))
+                {
+                    int timeout = int.Parse(retryAfterHeader.Value.ToString());
+                    await Task.Delay((timeout + 1) * 1000);
+                }
+                else
+                {
+                    await Task.Delay(3000);
+                }
+                return await ExecuteWithHandling(request);
             }
-            else
-            {
-                await Task.Delay(3000);
-            }
-            return await ExecuteWithHandling(request);
         }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
+            }
+        }
+
 
         if (response.IsSuccessful)
             return response;
 
-        throw ConfigureErrorException(response.Content);
+        throw ConfigureErrorException(response);
     }
 
-    private Exception ConfigureErrorException(string responseContent)
+    protected override Exception ConfigureErrorException(RestResponse response)
     {
-        var error = responseContent.DeserializeResponseContent<ErrorDto>();
-        if (error.Error.Code?.Equals("InternalServerError", StringComparison.OrdinalIgnoreCase) == true)
+        var error = response?.Content?.DeserializeResponseContent<ErrorDto>();
+        if ((error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
         {
             return new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
         }
-        return new PluginApplicationException($"{error.Error.Code} - {error.Error.Message}");
+        return new PluginApplicationException($"{error?.Error.Code} - {error?.Error.Message}");
     }
 }
