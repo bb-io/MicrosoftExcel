@@ -63,7 +63,7 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
         var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)?
                                        .ToDictionary(r => r.Key, r => r.Value?.ToString()) 
                                    ?? throw new InvalidOperationException($"Invalid response content: {responseContent}");
-        var expiresIn = int.Parse(resultDictionary["expires_in"]);
+        var expiresIn = int.Parse(resultDictionary["expires_in"] ?? throw new InvalidOperationException($"Missing expires_in value. Response: {responseContent}"));
         var expiresAt = utcNow.AddSeconds(expiresIn);
         resultDictionary.Add(ExpiresAtKeyName, expiresAt.ToString());
         return resultDictionary;
