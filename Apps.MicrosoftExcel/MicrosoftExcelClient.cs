@@ -9,13 +9,13 @@ using System.Threading;
 
 namespace Apps.MicrosoftExcel;
 
-public class MicrosoftExcelClient : BlackBirdRestClient
+public class MicrosoftExcelClient : RestClient
 {
     public MicrosoftExcelClient() 
         : base(new RestClientOptions
         {
             ThrowOnAnyError = false, BaseUrl = GetBaseUrl() ,
-            Timeout = TimeSpan.FromMilliseconds(200000)
+            MaxTimeout = 200000
         }) { }
 
     private static Uri GetBaseUrl()
@@ -67,7 +67,7 @@ public class MicrosoftExcelClient : BlackBirdRestClient
         throw ConfigureErrorException(response);
     }
 
-    protected override Exception ConfigureErrorException(RestResponse response)
+    private Exception ConfigureErrorException(RestResponse response)
     {
         var error = response?.Content?.DeserializeResponseContent<ErrorDto>();
         if ((error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
