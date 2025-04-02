@@ -37,8 +37,7 @@ public class MicrosoftExcelRequest : RestRequest
             request.AddHeader("Authorization", $"{accessToken}");
             var response = client.Get(request);
             var resultSites = response.Content.DeserializeResponseContent<ListWrapper<SiteDto>>();
-            siteId = resultSites.Value.FirstOrDefault(site => site.DisplayName == siteDisplayName)?.Id;
-
+            siteId = resultSites.Value.FirstOrDefault(site => site.DisplayName == siteDisplayName || site.WebUrl == siteDisplayName)?.Id;
             if (siteId != null)
                 break;
 
