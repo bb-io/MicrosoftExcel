@@ -5,6 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
 using RestSharp;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace Apps.MicrosoftExcel;
@@ -69,6 +70,19 @@ public class MicrosoftExcelClient : RestClient
 
     private Exception ConfigureErrorException(RestResponse response)
     {
+        var content = response.Content ?? string.Empty;
+        var contentType = response.Headers
+               .FirstOrDefault(h => string.Equals(h.Name, "Content-Type", StringComparison.OrdinalIgnoreCase))
+               ?.Value?
+               .ToString() ?? string.Empty;
+
+        if (contentType.Contains("html", StringComparison.OrdinalIgnoreCase)
+        || content.TrimStart().StartsWith("<"))
+        {
+            var plainText = Regex.Replace(content, "<.*?>", string.Empty).Trim();
+            return new PluginApplicationException($"HTTP {(int)response.StatusCode} — {plainText}");
+        }
+
         var error = response?.Content?.DeserializeResponseContent<ErrorDto>();
         if ((error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
         {
