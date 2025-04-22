@@ -22,8 +22,8 @@ namespace Apps.MicrosoftExcel.Actions;
 public class WorksheetActions : MicrosoftExcelInvocable
 {
     private readonly IFileManagementClient _fileManagementClient;
-    
-    public WorksheetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) 
+
+    public WorksheetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
         : base(invocationContext)
     {
         _fileManagementClient = fileManagementClient;
@@ -42,7 +42,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var cellValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
-        return new CellDto(){ Value = cellValue.Values.First().First() };
+        return new CellDto() { Value = cellValue.Values.First().First() };
     }
 
     [Action("Update sheet cell", Description = "Update cell by address")]
@@ -56,7 +56,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         cellRequest.CellAddress = cellRequest.CellAddress.ToUpper();
         ValidateCellAddressParameter(cellRequest);
         var request = new MicrosoftExcelRequest(
-            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')", 
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         request.AddJsonBody(new
         {
@@ -91,7 +91,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var newRowIndex = range.Rows.First().Values.All(x => string.IsNullOrWhiteSpace(x)) ? 1 : range.Rows.Count + 1;
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
-        
+
         //var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
 
         //var request = new MicrosoftExcelRequest(
@@ -103,7 +103,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
         //});
         //await Client.ExecuteWithHandling(request);
-        return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex});
+        return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex });
     }
 
     [Action("Update sheet row", Description = "Update row by start address")]
@@ -188,7 +188,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
     [Action("Find sheet row", Description = "Providing a column address and a value, return row number where said value is located")]
     public async Task<string?> FindRow([ActionParameter] WorkbookRequest workbookRequest,
-        [ActionParameter] WorksheetRequest worksheetRequest, [ActionParameter]FindRowRequest input) 
+        [ActionParameter] WorksheetRequest worksheetRequest, [ActionParameter] FindRowRequest input)
     {
         ValidateWorksheetParameter(worksheetRequest);
         var range = await GetUsedRange(workbookRequest, worksheetRequest);
@@ -201,7 +201,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var columnValues = allRows.Select(subList => subList.First()).ToList();
         var index = columnValues.IndexOf(input.Value);
         index = index + 1;
-        return index == 0 ? null : index.ToString();    
+        return index == 0 ? null : index.ToString();
     }
 
     [Action("Download sheet CSV file", Description = "Download CSV file")]
@@ -241,7 +241,8 @@ public class WorksheetActions : MicrosoftExcelInvocable
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         var allRows = rowValue.Values.ToList();
-        return new SimplerRowsDto()        {
+        return new SimplerRowsDto()
+        {
             Rows = allRows.Select(x => x.ToList()).ToList()
         };
     }
@@ -258,10 +259,10 @@ public class WorksheetActions : MicrosoftExcelInvocable
     private const string Definition = "Definition";
 
     [Action("Import glossary", Description = "Import glossary as Excel worksheet")]
-    public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest, 
+    public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] GlossaryWrapper glossary,
-        [ActionParameter] [Display("Overwrite existing sheet", 
-            Description = "Overwrite an existing sheet if it has the same title as the glossary")] 
+        [ActionParameter] [Display("Overwrite existing sheet",
+            Description = "Overwrite an existing sheet if it has the same title as the glossary")]
         bool? overwriteSheet)
     {
         static string? GetColumnValue(string columnName, GlossaryConceptEntry entry, string languageCode)
@@ -285,7 +286,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
                         term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
                     return string.Join(";; ", notes.Where(note => note != string.Empty));
                 }
-                    
+
                 return null;
             }
 
@@ -295,38 +296,38 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
             return null;
         }
-        
+
         await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
-        var blackbirdGlossary = await glossaryStream.ConvertFromTBX();
+        var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
         var sheetName = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)!;
-        
-        var listWorksheetsRequest = 
-            new MicrosoftExcelRequest($"/items/{workbookRequest.WorkbookId}/workbook/worksheets", Method.Get, 
+
+        var listWorksheetsRequest =
+            new MicrosoftExcelRequest($"/items/{workbookRequest.WorkbookId}/workbook/worksheets", Method.Get,
                 InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         var listWorksheetsResponse = await Client.ExecuteWithHandling<ListWorksheetsResponse>(listWorksheetsRequest);
         var worksheet = listWorksheetsResponse.Value.FirstOrDefault(sheet => sheet.Name == sheetName);
-        
+
         if (worksheet != null && (overwriteSheet == null || overwriteSheet.Value == false))
             sheetName += $" {DateTime.Now.ToString("dd-MM-yyyy")}";
 
         if (worksheet == null || (worksheet != null && (overwriteSheet == null || overwriteSheet.Value == false)))
         {
             const int maxAllowedSheetNameLength = 31;
-            
+
             if (sheetName.Length > maxAllowedSheetNameLength)
                 sheetName = sheetName.Substring(0, maxAllowedSheetNameLength);
-                
+
             worksheet = await CreateWorksheet(workbookRequest, new() { Name = sheetName });
         }
         else
         {
             var getUsedRangeRequest = new MicrosoftExcelRequest(
-                $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/usedRange", Method.Get, 
+                $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/usedRange", Method.Get,
                 InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
             var rangeAddress = await Client.ExecuteWithHandling<RangeAddressDto>(getUsedRangeRequest);
-            
+
             var clearWorksheetRequest = new MicrosoftExcelRequest(
-                    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/range(address='{rangeAddress.Address}')/clear", 
+                    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{sheetName}/range(address='{rangeAddress.Address}')/clear",
                     Method.Post, InvocationContext.AuthenticationCredentialsProviders, workbookRequest)
                 .WithJsonBody(new { applyTo = "Contents" });
 
@@ -338,7 +339,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
             .Select(section => section.LanguageCode)
             .Distinct()
             .ToList();
-        
+
         var languageRelatedColumns = languagesPresent
             .SelectMany(language => new[] { Term, Variations, Notes }
             .Select(suffix => $"{suffix} ({language})"))
@@ -354,19 +355,19 @@ public class WorksheetActions : MicrosoftExcelInvocable
                     languageRelatedColumns
                         .Select(column => GetColumnValue(column, entry, languageCode)))
                 .Where(value => value != null);
-            
+
             rowsToAdd.Add(new List<string>(new[]
             {
                 string.IsNullOrWhiteSpace(entry.Id) ? Guid.NewGuid().ToString() : entry.Id,
-                entry.Definition ?? "", 
+                entry.Definition ?? "",
                 entry.SubjectField ?? "",
                 string.Join(';', entry.Notes ?? Enumerable.Empty<string>())
             }.Concat(languageRelatedValues)));
         }
-        
+
         var startColumn = 1;
         var startRow = 1;
-        
+
         var endColumn = startColumn + rowsToAdd[0].Count - 1;
         var addRowsRequest = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheet.Id}/range(address='{startColumn.ToExcelColumnAddress()}{startRow}:{endColumn.ToExcelColumnAddress()}{rowsToAdd.Count}')",
@@ -392,25 +393,25 @@ public class WorksheetActions : MicrosoftExcelInvocable
             parsedGlossary[rows.Rows[0][i]] = new List<string>(rows.Rows.Skip(1)
                 .Select(row => i < row.Count ? row[i] : string.Empty));
         }
-        
+
         var glossaryConceptEntries = new List<GlossaryConceptEntry>();
 
         var entriesCount = rows.Rows.Count - 1;
-        
+
         for (var i = 0; i < entriesCount; i++)
         {
             string entryId = null;
             string? entryDefinition = null;
             string? entrySubjectField = null;
             List<string>? entryNotes = null;
-            
+
             var languageSections = new List<GlossaryLanguageSection>();
 
             foreach (var column in parsedGlossary)
             {
                 var columnName = column.Key;
                 var columnValues = column.Value;
-                
+
                 switch (columnName)
                 {
                     case Id:
@@ -418,34 +419,34 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
                         if (string.IsNullOrWhiteSpace(entryId))
                             entryId = Guid.NewGuid().ToString();
-                        
+
                         break;
-                    
+
                     case Definition:
                         entryDefinition = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
 
                         if (string.IsNullOrWhiteSpace(entryDefinition))
                             entryDefinition = null;
-                        
+
                         break;
-                    
+
                     case SubjectField:
                         entrySubjectField = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
 
                         if (string.IsNullOrWhiteSpace(entrySubjectField))
                             entrySubjectField = null;
-                        
+
                         break;
-                    
+
                     case Notes:
                         entryNotes = (i < columnValues.Count ? columnValues[i] : string.Empty).Split(';')
                             .Select(value => value.Trim()).ToList();
-                        
+
                         if (entryNotes.All(string.IsNullOrWhiteSpace))
                             entryNotes = null;
-                        
+
                         break;
-                    
+
                     case var languageTerm when new Regex($@"{Term} \(.*?\)").IsMatch(languageTerm):
                         var languageCode = new Regex($@"{Term} \((.*?)\)").Match(languageTerm).Groups[1].Value;
                         if (i < columnValues.Count)
@@ -454,9 +455,9 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                     { new(columnValues[i].Trim()) })));
                         else
                             languageSections.Add(new(languageCode,
-                                new List<GlossaryTermSection>(new GlossaryTermSection[] { new(string.Empty) }))); 
+                                new List<GlossaryTermSection>(new GlossaryTermSection[] { new(string.Empty) })));
                         break;
-                    
+
                     case var termVariations when new Regex($@"{Variations} \(.*?\)").IsMatch(termVariations):
                         if (i < columnValues.Count && !string.IsNullOrWhiteSpace(columnValues[i]))
                         {
@@ -468,14 +469,14 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                 .Select(term => new GlossaryTermSection(term.Trim())));
                         }
                         break;
-                    
+
                     case var termNotes when new Regex($@"{Notes} \(.*?\)").IsMatch(termNotes):
                         if (i < columnValues.Count)
                         {
                             languageCode = new Regex($@"{Notes} \((.*?)\)").Match(termNotes).Groups[1].Value;
                             var targetLanguageSectionIndex =
                                 languageSections.FindIndex(section => section.LanguageCode == languageCode);
-                            
+
                             var notesDictionary = columnValues[i]
                                 .Split(";; ")
                                 .Select(note => note.Split(": "))
@@ -483,7 +484,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                 .Select(note => new { Term = note[0], Notes = note[1] })
                                 .ToDictionary(value => value.Term.Trim(),
                                     value => value.Notes.Split(';').Select(note => note.Trim()));
-                        
+
                             foreach (var termNotesPair in notesDictionary)
                             {
                                 var targetTermIndex = languageSections[targetLanguageSectionIndex].Terms
@@ -492,7 +493,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
                                     termNotesPair.Value.ToList();
                             }
                         }
-                        
+
                         break;
                 }
             }
@@ -507,7 +508,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         }
 
         var title = input.Title;
-        
+
         if (title == null)
         {
             var getWorksheetRequest =
@@ -517,15 +518,15 @@ public class WorksheetActions : MicrosoftExcelInvocable
             var worksheet = await Client.ExecuteWithHandling<WorksheetDto>(getWorksheetRequest);
             title = worksheet.Name;
         }
-        
+
         var glossary = new Glossary(glossaryConceptEntries)
         {
-            Title = title, 
-            SourceDescription = input.SourceDescription 
-                                ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}" 
+            Title = title,
+            SourceDescription = input.SourceDescription
+                                ?? $"Glossary export from Microsoft Excel on {DateTime.Now.ToLocalTime().ToString("F")}"
         };
 
-        var glossaryStream = glossary.ConvertToTBX();
+        var glossaryStream = glossary.ConvertToTbx();
         var glossaryFileReference =
             await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
         return new() { Glossary = glossaryFileReference };
