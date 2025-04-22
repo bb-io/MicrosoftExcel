@@ -38,7 +38,7 @@ public class MicrosoftExcelClient : RestClient
             response = await ExecuteAsync(request);
 
             if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
-                (!string.IsNullOrEmpty(response.Content) && response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase)))
+                (!string.IsNullOrEmpty(response.Content) && (response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) || response.Content.Contains("UnknownError", StringComparison.OrdinalIgnoreCase))))
             {
                 var retryAfterHeader = response.Headers.FirstOrDefault(x => x.Name == "Retry-After");
                 if (retryAfterHeader != null && !string.IsNullOrEmpty(retryAfterHeader.Value?.ToString()))
@@ -59,6 +59,10 @@ public class MicrosoftExcelClient : RestClient
             {
                 throw new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
             }
+            else
+            {
+                throw new PluginApplicationException(ex.Message);
+            }   
         }
 
 
