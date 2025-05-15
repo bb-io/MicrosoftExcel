@@ -1,5 +1,6 @@
 ﻿using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Models.Requests;
+using Apps.MicrosoftExcel.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -48,7 +49,8 @@ public class WorkbookDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var request = new RestRequest(endpoint, Method.Get);
             request.AddHeader("Authorization", InvocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value);
             request.AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-            var files = await client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
+            var files = await ErrorHandler.ExecuteWithErrorHandlingAsync(() => client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request)
+            );
             var filteredFiles = files.Value
                 .Select(i => new { i.Id, i.Name })
                 .Where(i => i.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase));

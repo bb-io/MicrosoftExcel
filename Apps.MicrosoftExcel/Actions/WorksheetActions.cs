@@ -15,6 +15,7 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Apps.MicrosoftExcel.Utils;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -41,7 +42,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{cellRequest.CellAddress}')",
             Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
-        var cellValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
+        var cellValue = await ErrorHandler.ExecuteWithErrorHandlingAsync(() => Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request));
         return new CellDto() { Value = cellValue.Values.First().First() };
     }
 
