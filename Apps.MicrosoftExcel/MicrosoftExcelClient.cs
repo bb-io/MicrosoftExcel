@@ -5,6 +5,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
 using RestSharp;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
 
@@ -29,47 +30,43 @@ public class MicrosoftExcelClient : RestClient
         var response = await ExecuteWithHandling(request);
         return response.Content.DeserializeResponseContent<T>();
     }
-    
+
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
-        var response = new RestResponse();
-        try
-        {
-            response = await ExecuteAsync(request);
+        const int maxRetries = 5;
+        int attempt = 0;
 
-            if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests ||
-                (!string.IsNullOrEmpty(response.Content) && (response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) || response.Content.Contains("UnknownError", StringComparison.OrdinalIgnoreCase))))
+        while (true)
+        {
+            attempt++;
+            var response = await ExecuteAsync(request);
+
+            if (response.IsSuccessful)
+                return response;
+
+            bool isTooManyRequests = response.StatusCode == HttpStatusCode.TooManyRequests;
+            bool isServerError = (int)response.StatusCode >= 500 && (int)response.StatusCode < 600;
+            bool hasRetryableBody =
+                !string.IsNullOrEmpty(response.Content) &&
+                (response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase)
+                 || response.Content.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)
+                 || response.Content.Contains("UnknownError", StringComparison.OrdinalIgnoreCase));
+
+            if ((isTooManyRequests || isServerError || hasRetryableBody) && attempt <= maxRetries)
             {
-                var retryAfterHeader = response.Headers.FirstOrDefault(x => x.Name == "Retry-After");
-                if (retryAfterHeader != null && !string.IsNullOrEmpty(retryAfterHeader.Value?.ToString()))
+                var retryAfterHeader = response.Headers.FirstOrDefault(h => h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase));
+                if (retryAfterHeader != null && int.TryParse(retryAfterHeader.Value?.ToString(), out int seconds))
                 {
-                    int timeout = int.Parse(retryAfterHeader.Value.ToString());
-                    await Task.Delay((timeout + 1) * 1000);
+                    await Task.Delay((seconds + 1) * 1000);
                 }
                 else
                 {
-                    await Task.Delay(3000);
+                    await Task.Delay((int)(Math.Pow(2, attempt) * 1000));
                 }
-                return await ExecuteWithHandling(request);
+                continue;
             }
+            throw ConfigureErrorException(response);
         }
-        catch (Exception ex)
-        {
-            if (ex.Message.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
-            }
-            else
-            {
-                throw new PluginApplicationException(ex.Message);
-            }   
-        }
-
-
-        if (response.IsSuccessful)
-            return response;
-
-        throw ConfigureErrorException(response);
     }
 
     private Exception ConfigureErrorException(RestResponse response)
