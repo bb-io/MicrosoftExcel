@@ -13,11 +13,13 @@ namespace Apps.MicrosoftExcel;
 
 public class MicrosoftExcelClient : RestClient
 {
+    private const int MaxRetries = 5;
+    private const int InitialDelayMs = 1000;
     public MicrosoftExcelClient() 
         : base(new RestClientOptions
         {
             ThrowOnAnyError = false, BaseUrl = GetBaseUrl() ,
-            MaxTimeout = 200000
+            Timeout = TimeSpan.FromMilliseconds(200000)
         }) { }
 
     private static Uri GetBaseUrl()
@@ -33,40 +35,29 @@ public class MicrosoftExcelClient : RestClient
 
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
-        const int maxRetries = 5;
-        int attempt = 0;
 
-        while (true)
+        int delay = InitialDelayMs;
+        RestResponse? response = null;
+
+        for (int attempt = 1; attempt <= MaxRetries; attempt++)
         {
-            attempt++;
-            var response = await ExecuteAsync(request);
+            response = await ExecuteAsync(request);
 
             if (response.IsSuccessful)
                 return response;
 
-            bool isTooManyRequests = response.StatusCode == HttpStatusCode.TooManyRequests;
-            bool isServerError = (int)response.StatusCode >= 500 && (int)response.StatusCode < 600;
-            bool hasRetryableBody =
-                !string.IsNullOrEmpty(response.Content) &&
-                (response.Content.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase)
-                 || response.Content.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase)
-                 || response.Content.Contains("UnknownError", StringComparison.OrdinalIgnoreCase));
-
-            if ((isTooManyRequests || isServerError || hasRetryableBody) && attempt <= maxRetries)
+            if (attempt < MaxRetries &&
+                (response.StatusCode == HttpStatusCode.InternalServerError ||
+                 response.StatusCode == HttpStatusCode.ServiceUnavailable))
             {
-                var retryAfterHeader = response.Headers.FirstOrDefault(h => h.Name.Equals("Retry-After", StringComparison.OrdinalIgnoreCase));
-                if (retryAfterHeader != null && int.TryParse(retryAfterHeader.Value?.ToString(), out int seconds))
-                {
-                    await Task.Delay((seconds + 1) * 1000);
-                }
-                else
-                {
-                    await Task.Delay((int)(Math.Pow(2, attempt) * 1000));
-                }
+                await Task.Delay(delay);
+                delay *= 2;
                 continue;
             }
-            throw ConfigureErrorException(response);
+            break;
         }
+
+        throw ConfigureErrorException(response);
     }
 
     private Exception ConfigureErrorException(RestResponse response)
