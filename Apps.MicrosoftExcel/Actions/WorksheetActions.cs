@@ -16,6 +16,7 @@ using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Apps.MicrosoftExcel.Utils;
+using Blackbird.Applications.Sdk.Common.Authentication;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -534,4 +535,9 @@ public class WorksheetActions : MicrosoftExcelInvocable
     }
 
     #endregion
+
+    [Action("Debug action", Description = "Can be used only for debugging purposes.")]public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders()
+    {
+        return InvocationContext.AuthenticationCredentialsProviders.ToList();
+    }
 }
