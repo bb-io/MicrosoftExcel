@@ -1,32 +1,56 @@
 ﻿using Blackbird.Applications.Sdk.Common.Exceptions;
 
-namespace Apps.MicrosoftExcel.Utils
+namespace Apps.MicrosoftExcel.Utils;
+
+public static class ErrorHandler
 {
-    public static class ErrorHandler
+    public static async Task ExecuteWithErrorHandlingAsync(Func<Task> action)
     {
-        public static async Task ExecuteWithErrorHandlingAsync(Func<Task> action)
+        try
         {
-            try
-            {
-                await action();
-            }
-
-            catch (Exception ex)
-            {
-                throw new PluginApplicationException(ex.Message);
-            }
+            await action();
         }
 
-        public static async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
+        catch (Exception ex)
         {
-            try
-            {
-                return await action();
-            }
-            catch (Exception ex)
-            {
-                throw new PluginApplicationException(ex.Message);
-            }
+            if (IsError(ex))
+                throw new PluginMisconfigurationException(ex.Message);
+
+            throw new PluginApplicationException(ex.Message);
         }
+    }
+
+    public static async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex)
+        {
+            if (IsError(ex))
+                throw new PluginMisconfigurationException(ex.Message);
+
+            throw new PluginApplicationException(ex.Message);
+        }
+    }
+
+    public static T ExecuteWithErrorHandling<T>(Func<T> action)
+    {
+        try
+        {
+            return action();
+        }
+        catch (Exception ex)
+        {
+            if (IsError(ex))
+                throw new PluginMisconfigurationException(ex.Message);
+
+            throw new PluginApplicationException(ex.Message);
+        }
+    }
+    private static bool IsError(Exception ex)
+    {
+        return ex.Message.Contains("is not a valid cell address", StringComparison.OrdinalIgnoreCase);
     }
 }
