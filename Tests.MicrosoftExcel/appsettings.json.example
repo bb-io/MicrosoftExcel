@@ -1,6 +1,6 @@
 {
     "ConnectionDefinition": {
-        "SiteId": "[YOUR_SITE_ID]"
+        "Authorization": "Bearer your_access_token"
     },
     "TestFolder": "TestFiles"
 }
