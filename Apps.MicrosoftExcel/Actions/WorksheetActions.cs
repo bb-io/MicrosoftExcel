@@ -94,11 +94,29 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
 
-        return await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await UpdateRow(
-            workbookRequest,
-            worksheetRequest,
-            new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex })
-        );
+        return await ErrorHandler.ExecuteWithErrorHandlingAsync(async () =>
+        {
+            await InsertEmptyRow(workbookRequest, worksheetRequest, newRowIndex);
+
+            var address = $"{startColumn}{newRowIndex}";
+            return await UpdateRow(
+                workbookRequest,
+                worksheetRequest,
+                new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = address });
+        });
+    }
+
+    private async Task InsertEmptyRow(WorkbookRequest workbookRequest, WorksheetRequest worksheetRequest, int rowIndex)
+    {
+        var insertReq = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowIndex}:{rowIndex}')/insert",
+            Method.Post,
+            InvocationContext.AuthenticationCredentialsProviders,
+            workbookRequest);
+
+        insertReq.AddJsonBody(new { shift = "Down" });
+
+        await Client.ExecuteWithHandling<object>(insertReq);
     }
 
     [Action("Update sheet row", Description = "Update row by start address")]
