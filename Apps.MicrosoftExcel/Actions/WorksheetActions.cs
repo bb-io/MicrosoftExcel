@@ -20,17 +20,10 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 
 namespace Apps.MicrosoftExcel.Actions;
 
-[ActionList]
-public class WorksheetActions : MicrosoftExcelInvocable
+[ActionList("Worksheets")]
+public class WorksheetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
+    : MicrosoftExcelInvocable(invocationContext)
 {
-    private readonly IFileManagementClient _fileManagementClient;
-
-    public WorksheetActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient)
-        : base(invocationContext)
-    {
-        _fileManagementClient = fileManagementClient;
-    }
-
     [Action("Get sheet cell", Description = "Get cell by address")]
     public async Task<CellDto> GetCell(
         [ActionParameter] WorkbookRequest workbookRequest,
@@ -231,7 +224,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
         });
 
         using var stream = new MemoryStream(Encoding.ASCII.GetBytes(csv.ToString()));
-        var csvFile = await _fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Csv, "Table.csv");
+        var csvFile = await fileManagementClient.UploadAsync(stream, MediaTypeNames.Text.Csv, "Table.csv");
         return new(csvFile);
     }
 
@@ -310,7 +303,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
             return null;
         }
 
-        await using var glossaryStream = await _fileManagementClient.DownloadAsync(glossary.Glossary);
+        await using var glossaryStream = await fileManagementClient.DownloadAsync(glossary.Glossary);
         var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
         var sheetName = blackbirdGlossary.Title ?? Path.GetFileNameWithoutExtension(glossary.Glossary.Name)!;
 
@@ -541,7 +534,7 @@ public class WorksheetActions : MicrosoftExcelInvocable
 
         var glossaryStream = glossary.ConvertToTbx();
         var glossaryFileReference =
-            await _fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
+            await fileManagementClient.UploadAsync(glossaryStream, MediaTypeNames.Text.Xml, $"{title}.tbx");
         return new() { Glossary = glossaryFileReference };
     }
 
