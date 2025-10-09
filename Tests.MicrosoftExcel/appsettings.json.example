@@ -1,0 +1,6 @@
+{
+    "ConnectionDefinition": {
+        "Authorization": "Bearer your_access_token"
+    },
+    "TestFolder": "TestFiles"
+}

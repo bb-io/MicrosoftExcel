@@ -16,6 +16,7 @@ using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using RestSharp;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Apps.MicrosoftExcel.Utils;
+using Blackbird.Applications.Sdk.Common.Authentication;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -86,18 +87,29 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
         var startColumn = insertRowRequest.ColumnAddress ?? "A";
 
-        //var endColumn = (startColumn.ToExcelColumnIndex() + insertRowRequest.Row.Count - 1).ToExcelColumnAddress();
+        return await ErrorHandler.ExecuteWithErrorHandlingAsync(async () =>
+        {
+            await InsertEmptyRow(workbookRequest, worksheetRequest, newRowIndex);
 
-        //var request = new MicrosoftExcelRequest(
-        //    $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn}{newRowIndex}:{endColumn}{newRowIndex}')/insert",
-        //    Method.Post, InvocationContext.AuthenticationCredentialsProviders);
-        //request.AddJsonBody(new
-        //{
-        //    shift = "Down",
+            var address = $"{startColumn}{newRowIndex}";
+            return await UpdateRow(
+                workbookRequest,
+                worksheetRequest,
+                new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = address });
+        });
+    }
 
-        //});
-        //await Client.ExecuteWithHandling(request);
-        return await UpdateRow(workbookRequest, worksheetRequest, new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = startColumn + newRowIndex });
+    private async Task InsertEmptyRow(WorkbookRequest workbookRequest, WorksheetRequest worksheetRequest, int rowIndex)
+    {
+        var insertReq = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{rowIndex}:{rowIndex}')/insert",
+            Method.Post,
+            InvocationContext.AuthenticationCredentialsProviders,
+            workbookRequest);
+
+        insertReq.AddJsonBody(new { shift = "Down" });
+
+        await Client.ExecuteWithHandling<object>(insertReq);
     }
 
     [Action("Update sheet row", Description = "Update row by start address")]
@@ -107,7 +119,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         [ActionParameter] UpdateRowRequest updateRowRequest)
     {
         ValidateWorksheetParameter(worksheetRequest);
-        var (startColumn, row) = updateRowRequest.CellAddress.ToExcelColumnAndRow();
+        var (startColumn, row) = ErrorHandler.ExecuteWithErrorHandling(updateRowRequest.CellAddress.ToExcelColumnAndRow);
         var endColumn = startColumn + updateRowRequest.Row.Count - 1;
         var request = new MicrosoftExcelRequest(
             $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}/range(address='{startColumn.ToExcelColumnAddress()}{row}:{endColumn.ToExcelColumnAddress()}{row}')",
@@ -527,4 +539,9 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
     }
 
     #endregion
+
+    [Action("Debug action", Description = "Can be used only for debugging purposes.")]public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders()
+    {
+        return InvocationContext.AuthenticationCredentialsProviders.ToList();
+    }
 }
