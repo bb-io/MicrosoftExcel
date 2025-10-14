@@ -144,7 +144,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         {
             name = createWorksheetRequest.Name
         });
-        return await Client.ExecuteWithHandling<WorksheetDto>(request);
+        return await ErrorHandler.ExecuteWithErrorHandlingAsync(() => Client.ExecuteWithHandling<WorksheetDto>(request));
     }
 
     [Action("Get sheet range", Description = "Get a specific range of rows and columns in a sheet")]
