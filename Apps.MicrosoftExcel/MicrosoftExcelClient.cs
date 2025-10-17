@@ -35,7 +35,6 @@ public class MicrosoftExcelClient : RestClient
 
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
-
         int delay = InitialDelayMs;
         RestResponse? response = null;
 
@@ -62,6 +61,16 @@ public class MicrosoftExcelClient : RestClient
 
     private Exception ConfigureErrorException(RestResponse response)
     {
+        if (string.IsNullOrEmpty(response.Content))
+        {
+            if(string.IsNullOrEmpty(response.ErrorMessage))
+            {
+                return new PluginApplicationException($"HTTP {(int)response.StatusCode} — {response.StatusDescription}");
+            }
+            
+            return new PluginApplicationException(response.ErrorMessage);
+        }
+        
         var content = response.Content ?? string.Empty;
         var contentType = response.Headers
                .FirstOrDefault(h => string.Equals(h.Name, "Content-Type", StringComparison.OrdinalIgnoreCase))
@@ -76,10 +85,11 @@ public class MicrosoftExcelClient : RestClient
         }
 
         var error = response?.Content?.DeserializeResponseContent<ErrorDto>();
-        if ((error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
+        if (response!.StatusCode == HttpStatusCode.InternalServerError || (error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
         {
             return new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
         }
+        
         return new PluginApplicationException($"{error?.Error.Code} - {error?.Error.Message}");
     }
 }
