@@ -89,7 +89,12 @@ public class MicrosoftExcelClient : RestClient
         {
             return new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
         }
-        
+
+        if (response!.StatusCode == HttpStatusCode.ServiceUnavailable || (error?.Error.Message?.Contains("Service Unavailable", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("ServiceUnavailable", StringComparison.OrdinalIgnoreCase) ?? false))
+        {
+            return new PluginApplicationException("Server service unavailable error occurred. Please implement a retry policy and try again.");
+        }
+
         return new PluginApplicationException($"{error?.Error.Code} - {error?.Error.Message}");
     }
 }
