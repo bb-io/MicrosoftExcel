@@ -228,6 +228,29 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         return new(csvFile);
     }
 
+    [Action("Download workbook PDF file", Description = "Download PDF file")]
+    public async Task<FileResponse> DownloadWorkbookPdf([ActionParameter] WorkbookRequest workbookRequest)
+    {
+        var request = new MicrosoftExcelRequest($"/items/{workbookRequest.WorkbookId}/content?format=pdf", Method.Get, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
+        var response = await Client.ExecuteAsync(request);
+
+        if (!response.IsSuccessStatusCode || response.RawBytes is null || response.RawBytes.Length == 0)
+        {
+            throw new PluginApplicationException(
+                $"Failed to download workbook as PDF. Status code: {response.StatusCode}, content: {response.Content}");
+        }
+
+        var fileName = $"{workbookRequest.WorkbookId}.pdf";
+
+        using var stream = new MemoryStream(response.RawBytes);
+        var pdfFile = await fileManagementClient.UploadAsync(
+            stream,
+            MediaTypeNames.Application.Pdf,
+            fileName);
+
+        return new FileResponse(pdfFile);
+    }
+
     #region Utils
 
     private List<int> GetIdsRange(int start, int end)

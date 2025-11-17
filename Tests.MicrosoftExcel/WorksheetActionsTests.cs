@@ -110,4 +110,16 @@ public class WorksheetActionsTests : TestBase
         Console.WriteLine(json);
         Assert.IsNotNull(response);
     }
+
+    [TestMethod]
+    public async Task DownloadPdf_IsSuccess()
+    {
+        var action = new WorksheetActions(InvocationContext, FileManager);
+
+        var response = await action.DownloadWorkbookPdf(new WorkbookRequest { WorkbookId = "016FYB3YJRWLXMAN5Z5ZAY3J2FIUZ7MGRG"});
+
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
+        Assert.IsNotNull(response);
+    }
 }
