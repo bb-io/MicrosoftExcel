@@ -16,6 +16,8 @@ public class WorkbookFileDataSourceHandler(
     [ActionParameter] WorkbookRequest workbookRequest) :
     MicrosoftExcelInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
+    private const string RootFolderName = "Root";
+
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(
         FolderPathDataSourceContext context,
         CancellationToken cancellationToken)
@@ -45,14 +47,18 @@ public class WorkbookFileDataSourceHandler(
                 path.Add(new FolderPathItem
                 {
                     Id = item.Id,
-                    DisplayName = item.Name ?? "Root"
+                    DisplayName = item.Name ?? RootFolderName
                 });
             }
 
             currentId = item.ParentReference?.Id;
         }
 
-        path.Reverse();
+        path.Reverse(); 
+
+        if (path.Count > 0)
+            path[0].DisplayName = RootFolderName;
+
         return path;
     }
 
