@@ -100,8 +100,7 @@ public class WorkbookFileDataSourceHandler(
 
                     continue;
                 }
-
-                if (IsExcelFile(i))
+                else 
                 {
                     items.Add(new File
                     {
@@ -109,7 +108,7 @@ public class WorkbookFileDataSourceHandler(
                         DisplayName = i.Name,
                         Date = i.LastModifiedDateTime,
                         Size = i.Size,
-                        IsSelectable = true
+                        IsSelectable = IsExcelFile(i)
                     });
                 }
             }
