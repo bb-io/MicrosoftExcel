@@ -17,8 +17,8 @@ public class WorkbookFileDataSourceHandler(
     BaseInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(
-    FolderPathDataSourceContext context,
-    CancellationToken cancellationToken)
+        FolderPathDataSourceContext context,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(context.FileDataItemId))
             return Enumerable.Empty<FolderPathItem>();

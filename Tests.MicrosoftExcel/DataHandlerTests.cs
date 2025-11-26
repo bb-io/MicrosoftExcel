@@ -1,5 +1,6 @@
 ﻿using Apps.MicrosoftExcel.Models.Requests;
 using Apps.MicrosoftExcel.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 
@@ -9,7 +10,7 @@ namespace Tests.MicrosoftExcel;
 public class DataHandlerTests : TestBase
 {
     [TestMethod]
-    public async Task WorkbookFileDataSourceHandler_IsSuccess()
+    public async Task WorkbookFileDataSourceHandler_ReturnsFilesAndFolders()
     {
         // Arrange
         var request = new WorkbookRequest { SiteName = "" };
@@ -44,5 +45,24 @@ public class DataHandlerTests : TestBase
         );
 
         Assert.Contains("was not found", ex.Message);
+    }
+
+    [TestMethod]
+    public async Task SiteDataSourceHandler_ReturnsSiteNames()
+    {
+        // Arrange
+        var handler = new SiteDataSourceHandler(InvocationContext);
+
+        // Act
+        var response = await handler.GetDataAsync(
+            new DataSourceContext { SearchString = "" },
+            CancellationToken.None
+        );
+
+        // Assert
+        foreach (var item in response)
+            Console.WriteLine($"Id: {item.Value}, Name: {item.DisplayName}");
+
+        Assert.IsNotNull(response);
     }
 }
