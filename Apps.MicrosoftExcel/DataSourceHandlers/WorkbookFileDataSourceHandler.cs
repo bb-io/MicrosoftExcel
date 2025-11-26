@@ -56,13 +56,13 @@ public class WorkbookFileDataSourceHandler(
         FolderContentDataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var prefix = ResolvePrefix();
-        var folderId = string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId;
-
         var client = new MicrosoftExcelClient();
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
+        string prefix = ResolvePrefix();
+        string folderId = await ResolveFolderId(prefix, context.FolderId, token, client);
+        
         var items = new List<FileDataItem>();
         var endpoint = $"{prefix}/drive/items/{folderId}/children?$select=id,name,size,lastModifiedDateTime,folder&$top=200";
 
@@ -85,10 +85,13 @@ public class WorkbookFileDataSourceHandler(
                         Id = i.Id,
                         DisplayName = i.Name,
                         Date = i.LastModifiedDateTime,
-                        IsSelectable = true
+                        IsSelectable = false
                     });
+
+                    continue;
                 }
-                else
+
+                if (IsExcelFile(i))
                 {
                     items.Add(new File
                     {
@@ -119,5 +122,37 @@ public class WorkbookFileDataSourceHandler(
         }
 
         return "/me";
+    }
+
+    private static bool IsExcelFile(FileMetadataDto file)
+    {
+        return file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+               file.Name.EndsWith(".xls", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<string> ResolveFolderId(
+        string prefix,
+        string? folderId,
+        string token,
+        MicrosoftExcelClient client)
+    {
+        if (string.IsNullOrEmpty(folderId))
+            return "root";
+
+        var requestCheck = new RestRequest(
+            $"{prefix}/drive/items/{folderId}?$select=id,folder,parentReference", 
+            Method.Get
+        );
+        requestCheck.AddHeader("Authorization", token);
+
+        var itemCheck = await ErrorHandler.ExecuteWithErrorHandlingAsync(
+            () => client.ExecuteWithHandling<FileMetadataDto>(requestCheck)
+        );
+
+        // Go one level up if it's a file
+        if (itemCheck.Folder == null && itemCheck.ParentReference != null)
+            folderId = itemCheck.ParentReference.Id;
+
+        return folderId!;
     }
 }
