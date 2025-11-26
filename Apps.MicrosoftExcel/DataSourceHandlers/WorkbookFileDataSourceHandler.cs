@@ -16,8 +16,8 @@ public class WorkbookFileDataSourceHandler(
     BaseInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(
-        FolderPathDataSourceContext context,
-        CancellationToken cancellationToken)
+    FolderPathDataSourceContext context,
+    CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(context.FileDataItemId))
             return Enumerable.Empty<FolderPathItem>();
@@ -32,18 +32,22 @@ public class WorkbookFileDataSourceHandler(
 
         while (!string.IsNullOrEmpty(currentId))
         {
-            var request = new RestRequest($"{prefix}/drive/items/{currentId}?$select=id,name,parentReference", Method.Get);
+            var request = new RestRequest(
+                $"{prefix}/drive/items/{currentId}?$select=id,name,parentReference,folder", 
+                Method.Get
+            );
             request.AddHeader("Authorization", token);
 
-            var item = await ErrorHandler.ExecuteWithErrorHandlingAsync(
-                () => client.ExecuteWithHandling<FileMetadataDto>(request)
-            );
+            var item = await client.ExecuteWithHandling<FileMetadataDto>(request);
 
-            path.Add(new FolderPathItem
+            if (item.Folder != null)
             {
-                Id = item.Id,
-                DisplayName = item.Name
-            });
+                path.Add(new FolderPathItem
+                {
+                    Id = item.Id,
+                    DisplayName = item.Name ?? "Root"
+                });
+            }
 
             currentId = item.ParentReference?.Id;
         }
@@ -61,8 +65,8 @@ public class WorkbookFileDataSourceHandler(
             .First(p => p.KeyName == "Authorization").Value;
 
         string prefix = ResolvePrefix();
-        string folderId = await ResolveFolderId(prefix, context.FolderId, token, client);
-        
+        string folderId = context.FolderId ?? "root";
+
         var items = new List<FileDataItem>();
         var endpoint = $"{prefix}/drive/items/{folderId}/children?$select=id,name,size,lastModifiedDateTime,folder&$top=200";
 
@@ -128,31 +132,5 @@ public class WorkbookFileDataSourceHandler(
     {
         return file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
                file.Name.EndsWith(".xls", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static async Task<string> ResolveFolderId(
-        string prefix,
-        string? folderId,
-        string token,
-        MicrosoftExcelClient client)
-    {
-        if (string.IsNullOrEmpty(folderId))
-            return "root";
-
-        var requestCheck = new RestRequest(
-            $"{prefix}/drive/items/{folderId}?$select=id,folder,parentReference", 
-            Method.Get
-        );
-        requestCheck.AddHeader("Authorization", token);
-
-        var itemCheck = await ErrorHandler.ExecuteWithErrorHandlingAsync(
-            () => client.ExecuteWithHandling<FileMetadataDto>(requestCheck)
-        );
-
-        // Go one level up if it's a file
-        if (itemCheck.Folder == null && itemCheck.ParentReference != null)
-            folderId = itemCheck.ParentReference.Id;
-
-        return folderId!;
     }
 }
