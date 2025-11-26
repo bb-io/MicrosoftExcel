@@ -3,6 +3,7 @@ using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Utils;
 using Apps.MicrosoftExcel.Models.Requests;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
@@ -65,7 +66,7 @@ public class WorkbookFileDataSourceHandler(
             .First(p => p.KeyName == "Authorization").Value;
 
         string prefix = ResolvePrefix();
-        string folderId = context.FolderId ?? "root";
+        string folderId = !string.IsNullOrEmpty(context.FolderId) ? context.FolderId : "root";
 
         var items = new List<FileDataItem>();
         var endpoint = $"{prefix}/drive/items/{folderId}/children?$select=id,name,size,lastModifiedDateTime,folder&$top=200";
@@ -121,7 +122,8 @@ public class WorkbookFileDataSourceHandler(
             var token = InvocationContext.AuthenticationCredentialsProviders
                 .First(p => p.KeyName == "Authorization").Value;
 
-            var siteId = MicrosoftExcelRequest.GetSiteId(token, workbookRequest.SiteName);
+            var siteId = MicrosoftExcelRequest.GetSiteId(token, workbookRequest.SiteName) ??
+                throw new PluginMisconfigurationException($"'{workbookRequest?.SiteName}' site was not found");
             return $"/sites/{siteId}";
         }
 
