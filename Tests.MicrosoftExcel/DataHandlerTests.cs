@@ -1,24 +1,29 @@
-﻿using Apps.MicrosoftExcel.DataSourceHandlers;
-using Blackbird.Applications.Sdk.Common.Dynamic;
+﻿using Apps.MicrosoftExcel.Models.Requests;
+using Apps.MicrosoftExcel.DataSourceHandlers;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 
-namespace Tests.MicrosoftExcel
+namespace Tests.MicrosoftExcel;
+
+[TestClass]
+public class DataHandlerTests : TestBase
 {
-    [TestClass]
-    public class DataHandlerTests : TestBase
+    [TestMethod]
+    public async Task WorkbookFileDataSourceHandler_IsSuccess()
     {
-        [TestMethod]
-        public async Task WorkbookDataSourceHandler_IsSuccess()
-        {
-            var handler = new WorkbookDataSourceHandler(InvocationContext, new Apps.MicrosoftExcel.Models.Requests.WorkbookRequest { });
+        // Arrange
+        var request = new WorkbookRequest { SiteName = "" };
+        var handler = new WorkbookFileDataSourceHandler(InvocationContext, request);
 
-            var response = await handler.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+        // Act
+        var response = await handler.GetFolderContentAsync(
+            new FolderContentDataSourceContext { FolderId = "" }, 
+            CancellationToken.None
+        );
 
-            foreach (var item in response)
-            {
-                Console.WriteLine($"Id: {item.Key}, Name: {item.Value}");
-            }
+        // Assert
+        foreach (var item in response)
+            Console.WriteLine($"Id: {item.Id}, Type: {(item.Type == 0 ? "Folder" : "File")}, Name: {item.DisplayName}");
 
-            Assert.IsNotNull(response);
-        }
+        Assert.IsNotNull(response);
     }
 }

@@ -12,7 +12,7 @@ namespace Apps.MicrosoftExcel.Models.Requests
     public class WorkbookRequest
     {
         [Display("Workbook", Description = "Your Excel file")]
-        [DataSource(typeof(WorkbookDataSourceHandler))]
+        [DataSource(typeof(WorkbookFileDataSourceHandler))]
         public string WorkbookId { get; set; }
 
         [Display("Sharepoint site name", Description = "Sharepoint site name")]
