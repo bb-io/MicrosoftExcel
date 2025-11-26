@@ -13,8 +13,8 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers;
 
 public class WorkbookFileDataSourceHandler(
     InvocationContext invocationContext,
-    [ActionParameter] WorkbookRequest workbookRequest) : 
-    BaseInvocable(invocationContext), IAsyncFileDataSourceItemHandler
+    [ActionParameter] WorkbookRequest workbookRequest) :
+    MicrosoftExcelInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(
         FolderPathDataSourceContext context,
@@ -24,7 +24,6 @@ public class WorkbookFileDataSourceHandler(
             return Enumerable.Empty<FolderPathItem>();
 
         var prefix = ResolvePrefix();
-        var client = new MicrosoftExcelClient();
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
@@ -39,7 +38,7 @@ public class WorkbookFileDataSourceHandler(
             );
             request.AddHeader("Authorization", token);
 
-            var item = await client.ExecuteWithHandling<FileMetadataDto>(request);
+            var item = await Client.ExecuteWithHandling<FileMetadataDto>(request);
 
             if (item.Folder != null)
             {
