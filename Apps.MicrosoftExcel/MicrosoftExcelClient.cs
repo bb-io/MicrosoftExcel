@@ -9,7 +9,7 @@ namespace Apps.MicrosoftExcel;
 
 public class MicrosoftExcelClient : RestClient
 {
-    private const int MaxRetries = 5;
+    private const int MaxRetries = 6;
     private const int InitialDelayMs = 1000;
     public MicrosoftExcelClient()
         : base(new RestClientOptions

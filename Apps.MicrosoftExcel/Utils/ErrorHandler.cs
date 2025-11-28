@@ -10,7 +10,14 @@ public static class ErrorHandler
         {
             await action();
         }
-
+        catch (PluginApplicationException)
+        {
+            throw;
+        }
+        catch (PluginMisconfigurationException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             if (IsError(ex))
@@ -26,6 +33,14 @@ public static class ErrorHandler
         {
             return await action();
         }
+        catch (PluginApplicationException)
+        {
+            throw;
+        }
+        catch (PluginMisconfigurationException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             if (IsError(ex))
@@ -40,6 +55,14 @@ public static class ErrorHandler
         try
         {
             return action();
+        }
+        catch (PluginApplicationException)
+        {
+            throw;
+        }
+        catch (PluginMisconfigurationException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
