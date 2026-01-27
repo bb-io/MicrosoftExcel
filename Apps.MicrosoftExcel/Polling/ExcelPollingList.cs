@@ -9,6 +9,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
 
+[PollingEventList]
 public class ExcelPollingList(InvocationContext invocationContext)
     : BaseInvocable(invocationContext)
 {
