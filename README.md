@@ -54,6 +54,10 @@ In all actions you can specify optional input parameter "SharePoint site name" i
 
 ![SharePointSupport1](/image/README/SharePointSupport1.png) ![SharePointSupport2](/image/README/SharePointSupport2.png)
 
+## Events
+
+- **On workbook updated**
+
 ## Feedback
 
 Do you want to use this app or do you have feedback on our implementation? Reach out to us using the [established channels](https://www.blackbird.io/) or create an issue.
