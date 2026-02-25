@@ -76,7 +76,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
     }
 
     [Action("Add new sheet row", Description = "Adds a new row to the first empty line of the sheet")]
-    public async Task<RowDto> AddRow(
+    public async Task<AddnewrowResponse> AddRow(
         [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] InsertRowRequest insertRowRequest)
@@ -92,10 +92,15 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
             await InsertEmptyRow(workbookRequest, worksheetRequest, newRowIndex);
 
             var address = $"{startColumn}{newRowIndex}";
-            return await UpdateRow(
+            var response = await UpdateRow(
                 workbookRequest,
                 worksheetRequest,
                 new UpdateRowRequest { Row = insertRowRequest.Row, CellAddress = address });
+            return new AddnewrowResponse 
+            {
+                Row = response,
+                RowNumber = newRowIndex
+            };
         });
     }
 
