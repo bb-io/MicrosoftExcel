@@ -122,4 +122,16 @@ public class WorksheetActionsTests : TestBase
         Console.WriteLine(json);
         Assert.IsNotNull(response);
     }
+
+    [TestMethod]
+    public async Task CreateWorkbook_IsSuccess()
+    {
+        var action = new WorksheetActions(InvocationContext, FileManager);
+
+        var response = await action.CreateEmptyWorkbook(new  CreateWorkbookRequest { Name="Test workbook"});
+
+        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
+        Console.WriteLine(json);
+        Assert.IsNotNull(response);
+    }
 }
