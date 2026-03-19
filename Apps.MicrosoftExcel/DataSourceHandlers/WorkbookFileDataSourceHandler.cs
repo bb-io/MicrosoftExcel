@@ -25,7 +25,7 @@ public class WorkbookFileDataSourceHandler(
         if (string.IsNullOrEmpty(context.FileDataItemId))
             return Enumerable.Empty<FolderPathItem>();
 
-        var prefix = ResolvePrefix();
+        var prefix = await ResolvePrefix();
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
@@ -70,7 +70,7 @@ public class WorkbookFileDataSourceHandler(
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
-        string prefix = ResolvePrefix();
+        string prefix = await ResolvePrefix();
         string folderId = !string.IsNullOrEmpty(context.FolderId) ? context.FolderId : "root";
 
         var items = new List<FileDataItem>();
@@ -119,14 +119,14 @@ public class WorkbookFileDataSourceHandler(
         return items;
     }
 
-    private string ResolvePrefix()
+    private async Task<string> ResolvePrefix()
     {
         if (!string.IsNullOrEmpty(workbookRequest?.SiteName))
         {
             var token = InvocationContext.AuthenticationCredentialsProviders
                 .First(p => p.KeyName == "Authorization").Value;
 
-            var siteId = MicrosoftExcelRequest.GetSiteId(token, workbookRequest.SiteName) ??
+            var siteId = await MicrosoftExcelRequest.GetSiteId(token, workbookRequest.SiteName) ??
                 throw new PluginMisconfigurationException($"'{workbookRequest?.SiteName}' site was not found");
             return $"/sites/{siteId}";
         }

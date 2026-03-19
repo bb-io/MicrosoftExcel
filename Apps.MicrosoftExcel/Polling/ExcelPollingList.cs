@@ -23,7 +23,7 @@ public class ExcelPollingList(InvocationContext invocationContext)
             .First(p => p.KeyName == "Authorization").Value;
 
         var client = new MicrosoftExcelClient();
-        var prefix = ResolvePrefix(workbookRequest);
+        var prefix = await ResolvePrefix(workbookRequest);
 
         var metadataRequest = new RestRequest(
             $"{prefix}/drive/items/{workbookRequest.WorkbookId}?$select=id,name,lastModifiedDateTime",
@@ -81,14 +81,14 @@ public class ExcelPollingList(InvocationContext invocationContext)
         };
     }
 
-    private string ResolvePrefix(WorkbookRequest request)
+    private async Task<string> ResolvePrefix(WorkbookRequest request)
     {
         if (!string.IsNullOrEmpty(request.SiteName))
         {
             var token = InvocationContext.AuthenticationCredentialsProviders
                 .First(p => p.KeyName == "Authorization").Value;
 
-            var siteId = MicrosoftExcelRequest.GetSiteId(token, request.SiteName)
+            var siteId = await MicrosoftExcelRequest.GetSiteId(token, request.SiteName)
                 ?? throw new PluginMisconfigurationException(
                     $"'{request.SiteName}' site was not found");
 
