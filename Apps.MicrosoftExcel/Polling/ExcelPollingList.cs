@@ -4,7 +4,6 @@ using Apps.MicrosoftExcel.Models.Requests;
 using Apps.MicrosoftExcel.Polling.Models;
 using Apps.MicrosoftExcel.Utils;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using RestSharp;
@@ -14,8 +13,7 @@ public class ExcelPollingList(InvocationContext invocationContext)
     : BaseInvocable(invocationContext)
 {
     [PollingEvent("On workbook updated", Description = "Triggered when a workbook is modified")]
-    public async Task<PollingEventResponse<WorkbookUpdatedMemory, WorkbookUpdatedResult>>
-        OnWorkbookUpdated(
+    public async Task<PollingEventResponse<WorkbookUpdatedMemory, WorkbookUpdatedResult>> OnWorkbookUpdated(
             PollingEventRequest<WorkbookUpdatedMemory> request,
             [PollingEventParameter] WorkbookRequest workbookRequest)
     {
@@ -23,7 +21,7 @@ public class ExcelPollingList(InvocationContext invocationContext)
             .First(p => p.KeyName == "Authorization").Value;
 
         var client = new MicrosoftExcelClient();
-        var prefix = await ResolvePrefix(workbookRequest);
+        var prefix = await PrefixResolver.ResolvePrefix(token, InvocationContext.AuthenticationCredentialsProviders);
 
         var metadataRequest = new RestRequest(
             $"{prefix}/drive/items/{workbookRequest.WorkbookId}?$select=id,name,lastModifiedDateTime",
@@ -79,23 +77,6 @@ public class ExcelPollingList(InvocationContext invocationContext)
             Memory = memory,
             Result = result
         };
-    }
-
-    private async Task<string> ResolvePrefix(WorkbookRequest request)
-    {
-        if (!string.IsNullOrEmpty(request.SiteName))
-        {
-            var token = InvocationContext.AuthenticationCredentialsProviders
-                .First(p => p.KeyName == "Authorization").Value;
-
-            var siteId = await MicrosoftExcelRequest.GetSiteId(token, request.SiteName)
-                ?? throw new PluginMisconfigurationException(
-                    $"'{request.SiteName}' site was not found");
-
-            return $"/sites/{siteId}";
-        }
-
-        return "/me";
     }
 }
 

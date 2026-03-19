@@ -3,7 +3,6 @@ using Apps.MicrosoftExcel.Dtos;
 using Apps.MicrosoftExcel.Utils;
 using Apps.MicrosoftExcel.Models.Requests;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
@@ -23,9 +22,12 @@ public class WorkbookFileDataSourceHandler(
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(context.FileDataItemId))
-            return Enumerable.Empty<FolderPathItem>();
+            return [];
 
-        var prefix = await ResolvePrefix();
+        string prefix = await PrefixResolver.ResolvePrefix(
+            workbookRequest.SiteName, 
+            InvocationContext.AuthenticationCredentialsProviders);
+        
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
@@ -70,7 +72,9 @@ public class WorkbookFileDataSourceHandler(
         var token = InvocationContext.AuthenticationCredentialsProviders
             .First(p => p.KeyName == "Authorization").Value;
 
-        string prefix = await ResolvePrefix();
+        string prefix = await PrefixResolver.ResolvePrefix(
+            workbookRequest.SiteName,
+            InvocationContext.AuthenticationCredentialsProviders);
         string folderId = !string.IsNullOrEmpty(context.FolderId) ? context.FolderId : "root";
 
         var items = new List<FileDataItem>();
@@ -117,21 +121,6 @@ public class WorkbookFileDataSourceHandler(
         }
 
         return items;
-    }
-
-    private async Task<string> ResolvePrefix()
-    {
-        if (!string.IsNullOrEmpty(workbookRequest?.SiteName))
-        {
-            var token = InvocationContext.AuthenticationCredentialsProviders
-                .First(p => p.KeyName == "Authorization").Value;
-
-            var siteId = await MicrosoftExcelRequest.GetSiteId(token, workbookRequest.SiteName) ??
-                throw new PluginMisconfigurationException($"'{workbookRequest?.SiteName}' site was not found");
-            return $"/sites/{siteId}";
-        }
-
-        return "/me";
     }
 
     private static bool IsExcelFile(FileMetadataDto file)
