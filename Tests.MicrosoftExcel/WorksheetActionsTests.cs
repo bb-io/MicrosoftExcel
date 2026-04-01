@@ -126,12 +126,16 @@ public class WorksheetActionsTests : TestBase
     [TestMethod]
     public async Task CreateWorkbook_IsSuccess()
     {
+        // Arrange
         var action = new WorksheetActions(InvocationContext, FileManager);
+        var workbookRequest = new CreateWorkbookRequest { Name = "Test workbook" };
+        var siteRequest = new SiteNameOptionalRequest { SiteName = "Test website2" };
 
-        var response = await action.CreateEmptyWorkbook(new  CreateWorkbookRequest { Name="Test workbook"});
+        // Act
+        var response = await action.CreateEmptyWorkbook(workbookRequest, siteRequest);
 
-        var json = JsonConvert.SerializeObject(response, Formatting.Indented);
-        Console.WriteLine(json);
+        // Assert
+        PrintJsonResult(response);
         Assert.IsNotNull(response);
     }
 }

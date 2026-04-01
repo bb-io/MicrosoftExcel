@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace Apps.MicrosoftExcel.Extensions
 {
@@ -49,6 +44,12 @@ namespace Apps.MicrosoftExcel.Extensions
             var column = match.Groups[1].Value.ToExcelColumnIndex();
             var row = int.Parse(match.Groups[2].Value);
             return (column, row);
+        }
+
+        public static bool HasExcelExtension(this string filename)
+        {
+            return filename.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ||
+                   filename.EndsWith(".xls", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

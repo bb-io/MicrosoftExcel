@@ -1,4 +1,6 @@
-﻿using Blackbird.Applications.Sdk.Common;
+﻿using Apps.MicrosoftExcel.DataSourceHandlers;
+using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 
 namespace Apps.MicrosoftExcel.Models.Requests;
 
@@ -8,6 +10,7 @@ public class CreateWorkbookRequest
     public string Name { get; set; } = default!;
 
     [Display("Parent folder ID", Description = "Optional OneDrive folder item id. If empty - workbook is created in root.")]
+    [FileDataSource(typeof(FolderDataSourceHandler))]
     public string? ParentFolderId { get; set; }
 
     [Display("Overwrite", Description = "If true - replaces existing file with same name. If false - will rename on conflict.")]
