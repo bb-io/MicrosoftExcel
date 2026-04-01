@@ -109,7 +109,7 @@ public class BaseWorkbookFolderPicker(InvocationContext invocationContext, strin
         path.Reverse();
 
         if (path.Count > 0)
-            path[0].DisplayName = RootFolderName;
+            path[0].DisplayName = string.IsNullOrEmpty(sitename) ? RootFolderName : sitename;
 
         return path;
     }
