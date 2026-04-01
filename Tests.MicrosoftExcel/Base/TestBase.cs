@@ -1,6 +1,7 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace Tests.MicrosoftExcel
 {
@@ -29,6 +30,11 @@ namespace Tests.MicrosoftExcel
             };
 
             FileManager = new FileManager();
+        }
+
+        protected static void PrintJsonResult(object result)
+        {
+            Console.WriteLine(JsonConvert.SerializeObject(result, Formatting.Indented));
         }
     }
 }

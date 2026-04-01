@@ -9,8 +9,8 @@ namespace Apps.MicrosoftExcel.DataSourceHandlers;
 
 public class FolderDataSourceHandler(
     InvocationContext invocationContext,
-    [ActionParameter] WorkbookRequest workbookRequest)
-    : BaseWorkbookFolderPicker(invocationContext, workbookRequest.SiteName), IAsyncFileDataSourceItemHandler
+    [ActionParameter] SiteNameOptionalRequest siteName)
+    : BaseWorkbookFolderPicker(invocationContext, siteName.SiteName), IAsyncFileDataSourceItemHandler
 {
     public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken ct)
     {

@@ -258,7 +258,9 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
     }
 
     [Action("Create empty workbook", Description = "Create a new empty Excel workbook file in OneDrive")]
-    public async Task<CreateWorkbookResponse> CreateEmptyWorkbook([ActionParameter] CreateWorkbookRequest input)
+    public async Task<CreateWorkbookResponse> CreateEmptyWorkbook(
+        [ActionParameter] CreateWorkbookRequest input,
+        [ActionParameter] SiteNameOptionalRequest siteRequest)
     {
         if (string.IsNullOrWhiteSpace(input.Name))
             throw new PluginMisconfigurationException("Workbook name is required.");
@@ -271,29 +273,31 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
         var bytes = CreateEmptyXlsxBytes();
 
+        string prefix = await PrefixResolver.ResolvePrefix(
+            siteRequest?.SiteName,
+            InvocationContext.AuthenticationCredentialsProviders);
+
         return await ErrorHandler.ExecuteWithErrorHandlingAsync(async () =>
         {
+            var auth = InvocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
+            if (string.IsNullOrWhiteSpace(auth))
+                throw new PluginMisconfigurationException("Authorization token is missing.");
+
             if (overwrite)
             {
                 var path = string.IsNullOrWhiteSpace(input.ParentFolderId)
-                    ? $"/me/drive/root:/{Uri.EscapeDataString(fileName)}:/content"
-                    : $"/me/drive/items/{input.ParentFolderId}:/{Uri.EscapeDataString(fileName)}:/content";
+                    ? $"{prefix}/drive/root:/{Uri.EscapeDataString(fileName)}:/content"
+                    : $"{prefix}/drive/items/{input.ParentFolderId}:/{Uri.EscapeDataString(fileName)}:/content";
 
                 var request = new RestRequest(path, Method.Put);
                 request.AddHeader("Accept", "application/json");
                 request.AddHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                request.AddHeader("Authorization", auth);
 
                 request.AddParameter(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     bytes,
                     ParameterType.RequestBody);
-
-                var auth = InvocationContext.AuthenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
-
-                if (string.IsNullOrWhiteSpace(auth))
-                    throw new PluginMisconfigurationException("Authorization token is missing.");
-
-                request.AddHeader("Authorization", auth);
 
                 var created = await Client.ExecuteWithHandling<DriveItemDto>(request);
 
@@ -306,11 +310,12 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
             else
             {
                 var createPath = string.IsNullOrWhiteSpace(input.ParentFolderId)
-                    ? "/me/drive/root/children"
-                    : $"/me/drive/items/{input.ParentFolderId}/children";
+                    ? $"{prefix}/drive/root/children"
+                    : $"{prefix}/drive/items/{input.ParentFolderId}/children";
 
                 var createRequest = new RestRequest(createPath, Method.Post);
-                createRequest.AddHeader("Accept", "application/json");
+                createRequest.AddHeader("Accept", "application/json"); 
+                createRequest.AddHeader("Authorization", auth);
 
                 var body = new Dictionary<string, object?>
                 {
@@ -322,9 +327,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                 var createdMeta = await Client.ExecuteWithHandling<DriveItemDto>(createRequest);
 
-                var uploadRequest = new RestRequest($"/me/drive/items/{createdMeta.Id}/content", Method.Put);
+                var uploadRequest = new RestRequest($"{prefix}/drive/items/{createdMeta.Id}/content", Method.Put);
                 uploadRequest.AddHeader("Accept", "application/json");
                 uploadRequest.AddHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                uploadRequest.AddHeader("Authorization", auth);
 
                 uploadRequest.AddParameter(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
