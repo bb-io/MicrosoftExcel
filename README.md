@@ -10,23 +10,29 @@ Microsoft 365 Excel is a spreadsheet software that enables users to organize, an
 
 ## Actions
 
-- **Add new sheet row**   Adds a new row to the first empty line of the sheet
-- **Add new table row**   Add new table row
-- **Create table**    Create table
-- **Create worksheet**    Create worksheet
-- **Download sheet CSV file**  Download CSV file
-- **Export glossary**  Export glossary from Excel worksheet
-- **Find sheet row**  Providing a column address and a value, return row number where said value is located
-- **Get sheet cell**  Get cell by address
-- **Get sheet range**  Get a specific range of rows and columns in a sheet
-- **Get sheet row**   Get row by address
-- **Get sheet used range**    Get used range in a sheet
-- **Get table row**   Get table row
-- **Import glossary**  Import glossary as Excel worksheet
-- **List table rows**  List table rows
-- **Update sheet cell**   Update cell by address
-- **Update sheet row**    Update row by start address
-- **Update table row**    Update table row
+### Tables
+
+- **List table rows** List table rows
+- **Get table row** Get table row
+- **Update table row** Update table row
+- **Create table** Create table
+- **Add new table row** Add new table row
+
+### Worksheets
+
+- **Add new sheet row** Adds a new row to the first empty line of the sheet
+- **Create worksheet** Create worksheet
+- **Search worksheets** Search worksheets in a workbook
+- **Download sheet CSV file** Download CSV file
+- **Export glossary** Export glossary from Excel worksheet
+- **Find sheet row** Providing a column address and a value, return row number where said value is located
+- **Get sheet cell** Get cell by address
+- **Get sheet range** Get a specific range of rows and columns in a sheet
+- **Get sheet row** Get row by address
+- **Get sheet used range** Get used range in a sheet
+- **Import glossary** Import glossary as Excel worksheet
+- **Update sheet cell** Update cell by address
+- **Update sheet row** Update row by start address
 - **Download workbook PDF file** Download workbook PDF file
 
 ## Exporting glossaries
