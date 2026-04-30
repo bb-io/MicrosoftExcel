@@ -34,6 +34,7 @@ Microsoft 365 Excel is a spreadsheet software that enables users to organize, an
 - **Update sheet cell** Update cell by address
 - **Update sheet row** Update row by start address
 - **Download workbook PDF file** Download workbook PDF file
+- **Create empty workbook** Create a new empty Excel workbook file in OneDrive
 
 ## Exporting glossaries
 
