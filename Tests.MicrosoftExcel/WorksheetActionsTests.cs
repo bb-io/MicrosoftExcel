@@ -158,9 +158,18 @@ public class WorksheetActionsTests : TestBase
     }
 
     [TestMethod]
-    public void Create()
+    public async Task ExportGlossary_ReturnsExportedGlossary()
     {
-        string myString = Convert.ToBase64String(File.ReadAllBytes("/Users/antonfesenko/Documents/Untitled.xlsx"));
-        Console.WriteLine(myString);
+        // Arrange
+        var action = new WorksheetActions(InvocationContext, FileManager);
+        var workbook = new WorkbookRequest { WorkbookId = "01WKPATKWV5YI6UCM7OVHZGECA4N4M347G" };
+        var worksheet = new WorksheetRequest { Worksheet = "{00000000-0001-0000-0000-000000000000}" };
+        var input = new ExportGlossaryRequest { };
+        
+        // Act
+        var result = await action.ExportGlossary(workbook, worksheet, input);
+
+        // Assert
+        Console.WriteLine(result.Glossary.Name);
     }
 }

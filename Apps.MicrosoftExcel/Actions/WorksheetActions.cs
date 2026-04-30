@@ -14,7 +14,6 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Dtos;
 using Blackbird.Applications.Sdk.Utils.Extensions.Http;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
-using System.IO.Compression;
 using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -386,25 +385,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         };
     }
 
-    private static void AddEntry(ZipArchive archive, string path, string content)
-    {
-        var entry = archive.CreateEntry(path, CompressionLevel.Optimal);
-        using var entryStream = entry.Open();
-        using var writer = new StreamWriter(entryStream);
-        writer.Write(content);
-    }
-
     #endregion
 
 
     #region Glossaries
-
-    private const string Term = "Term";
-    private const string Variations = "Variations";
-    private const string Notes = "Notes";
-    private const string Id = "ID";
-    private const string SubjectField = "Subject field";
-    private const string Definition = "Definition";
 
     [Action("Import glossary", Description = "Import glossary as Excel worksheet")]
     public async Task<WorksheetDto> ImportGlossary([ActionParameter] WorkbookRequest workbookRequest,
@@ -419,16 +403,16 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
             if (languageSection != null)
             {
-                if (columnName == $"{Term} ({languageCode})")
+                if (columnName == $"{GlossaryConstants.Term} ({languageCode})")
                     return languageSection.Terms.FirstOrDefault()?.Term;
 
-                if (columnName == $"{Variations} ({languageCode})")
+                if (columnName == $"{GlossaryConstants.Variations} ({languageCode})")
                 {
                     var variations = languageSection.Terms.Skip(1).Select(term => term.Term);
                     return string.Join(';', variations);
                 }
 
-                if (columnName == $"{Notes} ({languageCode})")
+                if (columnName == $"{GlossaryConstants.Notes} ({languageCode})")
                 {
                     var notes = languageSection.Terms.Select(term =>
                         term.Notes == null ? string.Empty : term.Term + ": " + string.Join(';', term.Notes));
@@ -438,8 +422,9 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                 return null;
             }
 
-            if (columnName == $"{Term} ({languageCode})" || columnName == $"{Variations} ({languageCode})" ||
-                columnName == $"{Notes} ({languageCode})")
+            if (columnName == $"{GlossaryConstants.Term} ({languageCode})" || 
+                columnName == $"{GlossaryConstants.Variations} ({languageCode})" ||
+                columnName == $"{GlossaryConstants.Notes} ({languageCode})")
                 return string.Empty;
 
             return null;
@@ -489,12 +474,16 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
             .ToList();
 
         var languageRelatedColumns = languagesPresent
-            .SelectMany(language => new[] { Term, Variations, Notes }
+            .SelectMany(language => new[] { GlossaryConstants.Term, GlossaryConstants.Variations, GlossaryConstants.Notes }
             .Select(suffix => $"{suffix} ({language})"))
             .ToList();
 
         var rowsToAdd = new List<List<string>>();
-        rowsToAdd.Add(new List<string>(new[] { Id, Definition, SubjectField, Notes }.Concat(languageRelatedColumns)));
+        rowsToAdd.Add(
+            new List<string>(new[]
+            {
+                GlossaryConstants.Id, GlossaryConstants.Definition, GlossaryConstants.SubjectField, GlossaryConstants.Notes
+            }.Concat(languageRelatedColumns)));
 
         foreach (var entry in blackbirdGlossary.ConceptEntries)
         {
@@ -527,18 +516,26 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
     }
 
     [Action("Export glossary", Description = "Export glossary from Excel worksheet")]
-    public async Task<GlossaryWrapper> ExportGlossary([ActionParameter] WorkbookRequest workbookRequest,
+    public async Task<GlossaryWrapper> ExportGlossary(
+        [ActionParameter] WorkbookRequest workbookRequest,
         [ActionParameter] WorksheetRequest worksheetRequest,
         [ActionParameter] ExportGlossaryRequest input)
     {
         var rows = await GetGlossaryUsedRange(workbookRequest, worksheetRequest);
         var maxLength = rows.Rows.Max(list => list.Count);
-
+        
         var parsedGlossary = new Dictionary<string, List<string>>();
 
         for (var i = 0; i < maxLength; i++)
         {
-            parsedGlossary[rows.Rows[0][i]] = new List<string>(rows.Rows.Skip(1)
+            var columnName = i < rows.Rows[0].Count && !string.IsNullOrWhiteSpace(rows.Rows[0][i]) 
+                ? rows.Rows[0][i].Trim() 
+                : $"MissingHeader_{i}";
+
+            if (parsedGlossary.ContainsKey(columnName))
+                columnName = $"{columnName}_Duplicate_{i}";
+
+            parsedGlossary[columnName] = new List<string>(rows.Rows.Skip(1)
                 .Select(row => i < row.Count ? row[i] : string.Empty));
         }
 
@@ -548,7 +545,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
         for (var i = 0; i < entriesCount; i++)
         {
-            string entryId = null;
+            string entryId = string.Empty;
             string? entryDefinition = null;
             string? entrySubjectField = null;
             List<string>? entryNotes = null;
@@ -562,7 +559,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                 switch (columnName)
                 {
-                    case Id:
+                    case GlossaryConstants.Id:
                         entryId = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
 
                         if (string.IsNullOrWhiteSpace(entryId))
@@ -570,7 +567,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                         break;
 
-                    case Definition:
+                    case GlossaryConstants.Definition:
                         entryDefinition = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
 
                         if (string.IsNullOrWhiteSpace(entryDefinition))
@@ -578,7 +575,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                         break;
 
-                    case SubjectField:
+                    case GlossaryConstants.SubjectField:
                         entrySubjectField = i < columnValues.Count ? columnValues[i].Trim() : string.Empty;
 
                         if (string.IsNullOrWhiteSpace(entrySubjectField))
@@ -586,7 +583,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                         break;
 
-                    case Notes:
+                    case GlossaryConstants.Notes:
                         entryNotes = (i < columnValues.Count ? columnValues[i] : string.Empty).Split(';')
                             .Select(value => value.Trim()).ToList();
 
@@ -595,8 +592,8 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
                         break;
 
-                    case var languageTerm when new Regex($@"{Term} \(.*?\)").IsMatch(languageTerm):
-                        var languageCode = new Regex($@"{Term} \((.*?)\)").Match(languageTerm).Groups[1].Value;
+                    case var languageTerm when new Regex($@"{GlossaryConstants.Term} \(.*?\)").IsMatch(languageTerm):
+                        var languageCode = new Regex($@"{GlossaryConstants.Term} \((.*?)\)").Match(languageTerm).Groups[1].Value;
                         if (i < columnValues.Count)
                             languageSections.Add(new(languageCode,
                                 new List<GlossaryTermSection>(new GlossaryTermSection[]
@@ -606,10 +603,12 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                                 new List<GlossaryTermSection>(new GlossaryTermSection[] { new(string.Empty) })));
                         break;
 
-                    case var termVariations when new Regex($@"{Variations} \(.*?\)").IsMatch(termVariations):
+                    case var termVariations when new Regex($@"{GlossaryConstants.Variations} \(.*?\)").IsMatch(termVariations):
                         if (i < columnValues.Count && !string.IsNullOrWhiteSpace(columnValues[i]))
                         {
-                            languageCode = new Regex($@"{Variations} \((.*?)\)").Match(termVariations).Groups[1].Value;
+                            languageCode = new Regex($@"{GlossaryConstants.Variations} \((.*?)\)")
+                                .Match(termVariations).Groups[1].Value;
+                            
                             var targetLanguageSectionIndex =
                                 languageSections.FindIndex(section => section.LanguageCode == languageCode);
 
@@ -618,10 +617,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                         }
                         break;
 
-                    case var termNotes when new Regex($@"{Notes} \(.*?\)").IsMatch(termNotes):
+                    case var termNotes when new Regex($@"{GlossaryConstants.Notes} \(.*?\)").IsMatch(termNotes):
                         if (i < columnValues.Count)
                         {
-                            languageCode = new Regex($@"{Notes} \((.*?)\)").Match(termNotes).Groups[1].Value;
+                            languageCode = new Regex($@"{GlossaryConstants.Notes} \((.*?)\)").Match(termNotes).Groups[1].Value;
                             var targetLanguageSectionIndex =
                                 languageSections.FindIndex(section => section.LanguageCode == languageCode);
 
@@ -682,7 +681,8 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
     #endregion
 
-    [Action("Debug action", Description = "Can be used only for debugging purposes.")]public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders()
+    [Action("Debug action", Description = "Can be used only for debugging purposes.")]
+    public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders()
     {
         return InvocationContext.AuthenticationCredentialsProviders.ToList();
     }
