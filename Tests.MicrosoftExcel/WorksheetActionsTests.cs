@@ -128,8 +128,8 @@ public class WorksheetActionsTests : TestBase
     {
         // Arrange
         var action = new WorksheetActions(InvocationContext, FileManager);
-        var workbookRequest = new CreateWorkbookRequest { Name = "Test workbook" };
-        var siteRequest = new SiteNameOptionalRequest { SiteName = "Test website2" };
+        var workbookRequest = new CreateWorkbookRequest { Name = "Test workbook2", ParentFolderId = "01WKPATKUOTFD4WBWHRFG2JYOMTWV72D6V"};
+        var siteRequest = new SiteNameOptionalRequest {  };
 
         // Act
         var response = await action.CreateEmptyWorkbook(workbookRequest, siteRequest);
@@ -137,5 +137,30 @@ public class WorksheetActionsTests : TestBase
         // Assert
         PrintJsonResult(response);
         Assert.IsNotNull(response);
+    }
+
+    [TestMethod]
+    public async Task SearchWorksheets_ReturnsWorksheets()
+    {
+        // Arrange
+        var action = new WorksheetActions(InvocationContext, FileManager);
+        var workbookRequest = new WorkbookRequest
+        {
+            WorkbookId = "01WKPATKSJES4LJKPSEVDZONHXGHODLA3S"
+        };
+
+        // Act
+        var result = await action.SearchWorksheets(workbookRequest);
+
+        // Assert
+        PrintJsonResult(result);
+        Assert.IsNotNull(result);
+    }
+
+    [TestMethod]
+    public void Create()
+    {
+        string myString = Convert.ToBase64String(File.ReadAllBytes("/Users/antonfesenko/Documents/Untitled.xlsx"));
+        Console.WriteLine(myString);
     }
 }

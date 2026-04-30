@@ -18,6 +18,7 @@ using System.IO.Compression;
 using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
+using Apps.MicrosoftExcel.Constants;
 
 namespace Apps.MicrosoftExcel.Actions;
 
@@ -153,6 +154,21 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         return await ErrorHandler.ExecuteWithErrorHandlingAsync(() => Client.ExecuteWithHandling<WorksheetDto>(request));
     }
 
+    [Action("Search worksheets", Description = "Search worksheets in a workbook")]
+    public async Task<SearchWorksheetsDto> SearchWorksheets([ActionParameter] WorkbookRequest workbookRequest)
+    {
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets",
+            Method.Get, 
+            InvocationContext.AuthenticationCredentialsProviders, 
+            workbookRequest);
+        
+        var result = await ErrorHandler.ExecuteWithErrorHandlingAsync(
+            () => Client.ExecuteWithHandling<ValueListWrapper<WorksheetDto>>(request));
+
+        return new(result.Value.ToList());
+    }
+    
     [Action("Get sheet range", Description = "Get a specific range of rows and columns in a sheet")]
     public async Task<RowsDto> GetRange(
     [ActionParameter] WorkbookRequest workbookRequest,
@@ -176,8 +192,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
             RowsCount = (double)rowValue.Values.Count()
         };
     }
-
-
+    
     [Action("Get sheet used range", Description = "Get used range in a sheet")]
     public async Task<RowsDto> GetUsedRange(
         [ActionParameter] WorkbookRequest workbookRequest,
@@ -271,7 +286,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
 
         var overwrite = input.Overwrite ?? true;
 
-        var bytes = CreateEmptyXlsxBytes();
+        var bytes = Convert.FromBase64String(ExcelConstants.BlankBase64Spreadsheet);
 
         string prefix = await PrefixResolver.ResolvePrefix(
             siteRequest?.SiteName,
@@ -307,44 +322,42 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                     Name = created.Name
                 };
             }
-            else
+            
+            var createPath = string.IsNullOrWhiteSpace(input.ParentFolderId)
+                ? $"{prefix}/drive/root/children"
+                : $"{prefix}/drive/items/{input.ParentFolderId}/children";
+
+            var createRequest = new RestRequest(createPath, Method.Post);
+            createRequest.AddHeader("Accept", "application/json"); 
+            createRequest.AddHeader("Authorization", auth);
+
+            var body = new Dictionary<string, object?>
             {
-                var createPath = string.IsNullOrWhiteSpace(input.ParentFolderId)
-                    ? $"{prefix}/drive/root/children"
-                    : $"{prefix}/drive/items/{input.ParentFolderId}/children";
+                ["name"] = fileName,
+                ["file"] = new { },
+                ["@microsoft.graph.conflictBehavior"] = "rename"
+            };
+            createRequest.AddJsonBody(body);
 
-                var createRequest = new RestRequest(createPath, Method.Post);
-                createRequest.AddHeader("Accept", "application/json"); 
-                createRequest.AddHeader("Authorization", auth);
+            var createdMeta = await Client.ExecuteWithHandling<DriveItemDto>(createRequest);
 
-                var body = new Dictionary<string, object?>
-                {
-                    ["name"] = fileName,
-                    ["file"] = new { },
-                    ["@microsoft.graph.conflictBehavior"] = "rename"
-                };
-                createRequest.AddJsonBody(body);
+            var uploadRequest = new RestRequest($"{prefix}/drive/items/{createdMeta.Id}/content", Method.Put);
+            uploadRequest.AddHeader("Accept", "application/json");
+            uploadRequest.AddHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            uploadRequest.AddHeader("Authorization", auth);
 
-                var createdMeta = await Client.ExecuteWithHandling<DriveItemDto>(createRequest);
+            uploadRequest.AddParameter(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                bytes,
+                ParameterType.RequestBody);
 
-                var uploadRequest = new RestRequest($"{prefix}/drive/items/{createdMeta.Id}/content", Method.Put);
-                uploadRequest.AddHeader("Accept", "application/json");
-                uploadRequest.AddHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                uploadRequest.AddHeader("Authorization", auth);
+            var createdFinal = await Client.ExecuteWithHandling<DriveItemDto>(uploadRequest);
 
-                uploadRequest.AddParameter(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    bytes,
-                    ParameterType.RequestBody);
-
-                var createdFinal = await Client.ExecuteWithHandling<DriveItemDto>(uploadRequest);
-
-                return new CreateWorkbookResponse
-                {
-                    WorkbookId = createdFinal.Id,
-                    Name = createdFinal.Name
-                };
-            }
+            return new CreateWorkbookResponse
+            {
+                WorkbookId = createdFinal.Id,
+                Name = createdFinal.Name
+            };
         });
     }
 
@@ -379,125 +392,6 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         using var entryStream = entry.Open();
         using var writer = new StreamWriter(entryStream);
         writer.Write(content);
-    }
-
-    private static byte[] CreateEmptyXlsxBytes()
-    {
-        using var ms = new MemoryStream();
-
-        using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
-        {
-            AddEntry(archive, "[Content_Types].xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8""?>
-<Types xmlns=""http://schemas.openxmlformats.org/package/2006/content-types"">
-  <Default Extension=""rels"" ContentType=""application/vnd.openxmlformats-package.relationships+xml""/>
-  <Default Extension=""xml"" ContentType=""application/xml""/>
-  <Override PartName=""/xl/workbook.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml""/>
-  <Override PartName=""/xl/worksheets/sheet1.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml""/>
-  <Override PartName=""/xl/styles.xml"" ContentType=""application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml""/>
-  <Override PartName=""/xl/theme/theme1.xml"" ContentType=""application/vnd.openxmlformats-officedocument.theme+xml""/>
-  <Override PartName=""/docProps/core.xml"" ContentType=""application/vnd.openxmlformats-package.core-properties+xml""/>
-  <Override PartName=""/docProps/app.xml"" ContentType=""application/vnd.openxmlformats-officedocument.extended-properties+xml""/>
-</Types>");
-
-            AddEntry(archive, "_rels/.rels",
-                @"<?xml version=""1.0"" encoding=""UTF-8""?>
-<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
-  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"" Target=""xl/workbook.xml""/>
-  <Relationship Id=""rId2"" Type=""http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties"" Target=""docProps/core.xml""/>
-  <Relationship Id=""rId3"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties"" Target=""docProps/app.xml""/>
-</Relationships>");
-
-            var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-            AddEntry(archive, "docProps/core.xml",
-                $@"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<cp:coreProperties xmlns:cp=""http://schemas.openxmlformats.org/package/2006/metadata/core-properties""
- xmlns:dc=""http://purl.org/dc/elements/1.1/""
- xmlns:dcterms=""http://purl.org/dc/terms/""
- xmlns:dcmitype=""http://purl.org/dc/dcmitype/""
- xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"">
-  <dc:title></dc:title>
-  <dc:creator>Blackbird</dc:creator>
-  <cp:lastModifiedBy>Blackbird</cp:lastModifiedBy>
-  <dcterms:created xsi:type=""dcterms:W3CDTF"">{now}</dcterms:created>
-  <dcterms:modified xsi:type=""dcterms:W3CDTF"">{now}</dcterms:modified>
-</cp:coreProperties>");
-
-            AddEntry(archive, "docProps/app.xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<Properties xmlns=""http://schemas.openxmlformats.org/officeDocument/2006/extended-properties""
- xmlns:vt=""http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"">
-  <Application>Microsoft Excel</Application>
-</Properties>");
-
-            AddEntry(archive, "xl/workbook.xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<workbook xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main""
- xmlns:r=""http://schemas.openxmlformats.org/officeDocument/2006/relationships"">
-  <sheets>
-    <sheet name=""Sheet1"" sheetId=""1"" r:id=""rId1""/>
-  </sheets>
-</workbook>");
-
-            AddEntry(archive, "xl/_rels/workbook.xml.rels",
-                @"<?xml version=""1.0"" encoding=""UTF-8""?>
-<Relationships xmlns=""http://schemas.openxmlformats.org/package/2006/relationships"">
-  <Relationship Id=""rId1"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"" Target=""worksheets/sheet1.xml""/>
-  <Relationship Id=""rId2"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"" Target=""styles.xml""/>
-  <Relationship Id=""rId3"" Type=""http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme"" Target=""theme/theme1.xml""/>
-</Relationships>");
-
-            AddEntry(archive, "xl/worksheets/sheet1.xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<worksheet xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main"">
-  <sheetData/>
-</worksheet>");
-
-            AddEntry(archive, "xl/styles.xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<styleSheet xmlns=""http://schemas.openxmlformats.org/spreadsheetml/2006/main"">
-  <fonts count=""1""><font><sz val=""11""/><color theme=""1""/><name val=""Calibri""/><family val=""2""/></font></fonts>
-  <fills count=""2""><fill><patternFill patternType=""none""/></fill><fill><patternFill patternType=""gray125""/></fill></fills>
-  <borders count=""1""><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellStyleXfs count=""1""><xf numFmtId=""0"" fontId=""0"" fillId=""0"" borderId=""0""/></cellStyleXfs>
-  <cellXfs count=""1""><xf numFmtId=""0"" fontId=""0"" fillId=""0"" borderId=""0"" xfId=""0""/></cellXfs>
-  <cellStyles count=""1""><cellStyle name=""Normal"" xfId=""0"" builtinId=""0""/></cellStyles>
-</styleSheet>");
-
-            AddEntry(archive, "xl/theme/theme1.xml",
-                @"<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>
-<a:theme xmlns:a=""http://schemas.openxmlformats.org/drawingml/2006/main"" name=""Office Theme"">
-  <a:themeElements>
-    <a:clrScheme name=""Office"">
-      <a:dk1><a:sysClr val=""windowText"" lastClr=""000000""/></a:dk1>
-      <a:lt1><a:sysClr val=""window"" lastClr=""FFFFFF""/></a:lt1>
-      <a:dk2><a:srgbClr val=""1F497D""/></a:dk2>
-      <a:lt2><a:srgbClr val=""EEECE1""/></a:lt2>
-      <a:accent1><a:srgbClr val=""4F81BD""/></a:accent1>
-      <a:accent2><a:srgbClr val=""C0504D""/></a:accent2>
-      <a:accent3><a:srgbClr val=""9BBB59""/></a:accent3>
-      <a:accent4><a:srgbClr val=""8064A2""/></a:accent4>
-      <a:accent5><a:srgbClr val=""4BACC6""/></a:accent5>
-      <a:accent6><a:srgbClr val=""F79646""/></a:accent6>
-      <a:hlink><a:srgbClr val=""0000FF""/></a:hlink>
-      <a:folHlink><a:srgbClr val=""800080""/></a:folHlink>
-    </a:clrScheme>
-    <a:fontScheme name=""Office"">
-      <a:majorFont><a:latin typeface=""Calibri Light""/></a:majorFont>
-      <a:minorFont><a:latin typeface=""Calibri""/></a:minorFont>
-    </a:fontScheme>
-    <a:fmtScheme name=""Office"">
-      <a:fillStyleLst/>
-      <a:lnStyleLst/>
-      <a:effectStyleLst/>
-      <a:bgFillStyleLst/>
-    </a:fmtScheme>
-  </a:themeElements>
-</a:theme>");
-        }
-
-        return ms.ToArray();
     }
 
     #endregion
