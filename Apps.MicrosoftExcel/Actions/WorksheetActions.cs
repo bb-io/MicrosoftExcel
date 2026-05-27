@@ -611,7 +611,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                             
                             var targetLanguageSectionIndex =
                                 languageSections.FindIndex(section => section.LanguageCode == languageCode);
-
+                            
+                            if (targetLanguageSectionIndex < 0) 
+                                break;
+                            
                             languageSections[targetLanguageSectionIndex].Terms.AddRange(columnValues[i].Split(';')
                                 .Select(term => new GlossaryTermSection(term.Trim())));
                         }
@@ -623,7 +626,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                             languageCode = new Regex($@"{GlossaryConstants.Notes} \((.*?)\)").Match(termNotes).Groups[1].Value;
                             var targetLanguageSectionIndex =
                                 languageSections.FindIndex(section => section.LanguageCode == languageCode);
-
+                            
+                            if (targetLanguageSectionIndex < 0)
+                                break;
+                            
                             var notesDictionary = columnValues[i]
                                 .Split(";; ")
                                 .Select(note => note.Split(": "))
@@ -636,6 +642,10 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
                             {
                                 var targetTermIndex = languageSections[targetLanguageSectionIndex].Terms
                                     .FindIndex(term => term.Term == termNotesPair.Key);
+                                
+                                if (targetTermIndex < 0) 
+                                    continue;
+                                
                                 languageSections[targetLanguageSectionIndex].Terms[targetTermIndex].Notes =
                                     termNotesPair.Value.ToList();
                             }
