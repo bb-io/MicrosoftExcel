@@ -45,7 +45,8 @@ public class MicrosoftExcelClient : RestClient
 
             if (attempt < MaxRetries &&
                 (response.StatusCode == HttpStatusCode.InternalServerError ||
-                 response.StatusCode == HttpStatusCode.ServiceUnavailable))
+                 response.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                 IsMaxRequestDurationExceeded(response)))
             {
                 await Task.Delay(delay);
                 delay *= 2;
@@ -55,6 +56,17 @@ public class MicrosoftExcelClient : RestClient
         }
 
         throw ConfigureErrorException(response);
+    }
+
+    private static bool IsMaxRequestDurationExceeded(RestResponse response)
+    {
+        if (string.IsNullOrEmpty(response.Content)) return false;
+        try
+        {
+            var error = response.Content.DeserializeResponseContent<ErrorDto>();
+            return string.Equals(error?.Error?.Code, "MaxRequestDurationExceeded", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
     }
 
     private Exception ConfigureErrorException(RestResponse response)
