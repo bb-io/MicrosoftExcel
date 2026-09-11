@@ -13,7 +13,7 @@ public static class RestResponseExtensions
                    or HttpStatusCode.ServiceUnavailable
                    or HttpStatusCode.TooManyRequests
                    or HttpStatusCode.GatewayTimeout
-               || response.ResponseStatus is ResponseStatus.TimedOut
+               || response.ResponseStatus is ResponseStatus.TimedOut or ResponseStatus.Error
                || response.IsMaxRequestDurationExceeded();
     }
     
