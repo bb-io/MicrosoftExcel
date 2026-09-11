@@ -40,6 +40,9 @@ public static class RestResponseExtensions
             .Value
             .ToString();
 
-        return int.TryParse(value, out var seconds) ? TimeSpan.FromSeconds(seconds) : null;
+        if (!int.TryParse(value, out var seconds))
+            return null;
+
+        return TimeSpan.FromSeconds(Math.Min(seconds, 60));
     }
 }
