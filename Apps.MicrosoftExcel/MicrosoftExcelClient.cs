@@ -4,27 +4,30 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
 using System.Net;
 using System.Text.RegularExpressions;
+using Polly;
+using Polly.Retry;
 
 namespace Apps.MicrosoftExcel;
 
-public class MicrosoftExcelClient : RestClient
+public class MicrosoftExcelClient() : RestClient(new RestClientOptions
 {
-    private const int MaxRetries = 6;
-    private const int InitialDelayMs = 1000;
-    public MicrosoftExcelClient()
-        : base(new RestClientOptions
+    ThrowOnAnyError = false,
+    BaseUrl = new Uri("https://graph.microsoft.com/v1.0"),
+    Timeout = TimeSpan.FromMilliseconds(200000),
+})
+{
+    private static readonly ResiliencePipeline<RestResponse> RetryPipeline = new ResiliencePipelineBuilder<RestResponse>()
+        .AddRetry(new RetryStrategyOptions<RestResponse>
         {
-            ThrowOnAnyError = false,
-            BaseUrl = GetBaseUrl(),
-            Timeout = TimeSpan.FromMilliseconds(200000)
+            MaxRetryAttempts = 5,
+            UseJitter = true,
+            Delay = TimeSpan.FromSeconds(1),
+            BackoffType = DelayBackoffType.Exponential,
+            ShouldHandle = new PredicateBuilder<RestResponse>().HandleResult(x => x.IsTransient()),
+            DelayGenerator = args => new ValueTask<TimeSpan?>(args.Outcome.Result.GetRetryAfter())
         })
-    { }
-
-    private static Uri GetBaseUrl()
-    {
-        return new Uri("https://graph.microsoft.com/v1.0"); // me/drive or sites/{siteId} 
-    }
-
+        .Build();
+    
     public async Task<T> ExecuteWithHandling<T>(RestRequest request)
     {
         var response = await ExecuteWithHandling(request);
@@ -33,43 +36,11 @@ public class MicrosoftExcelClient : RestClient
 
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
-        int delay = InitialDelayMs;
-        RestResponse? response = null;
-
-        for (int attempt = 1; attempt <= MaxRetries; attempt++)
-        {
-            response = await ExecuteAsync(request);
-
-            if (response.IsSuccessful)
-                return response;
-
-            if (attempt < MaxRetries &&
-                (response.StatusCode == HttpStatusCode.InternalServerError ||
-                 response.StatusCode == HttpStatusCode.ServiceUnavailable ||
-                 IsMaxRequestDurationExceeded(response)))
-            {
-                await Task.Delay(delay);
-                delay *= 2;
-                continue;
-            }
-            break;
-        }
-
-        throw ConfigureErrorException(response);
+        var response = await RetryPipeline.ExecuteAsync(async ct => await ExecuteAsync(request, ct), CancellationToken.None);
+        return response.IsSuccessful ? response : throw ConfigureErrorException(response);
     }
 
-    private static bool IsMaxRequestDurationExceeded(RestResponse response)
-    {
-        if (string.IsNullOrEmpty(response.Content)) return false;
-        try
-        {
-            var error = response.Content.DeserializeResponseContent<ErrorDto>();
-            return string.Equals(error?.Error?.Code, "MaxRequestDurationExceeded", StringComparison.OrdinalIgnoreCase);
-        }
-        catch { return false; }
-    }
-
-    private Exception ConfigureErrorException(RestResponse response)
+    private static PluginApplicationException ConfigureErrorException(RestResponse response)
     {
         if (string.IsNullOrEmpty(response.Content))
         {
@@ -94,15 +65,13 @@ public class MicrosoftExcelClient : RestClient
             return new PluginApplicationException($"HTTP {(int)response.StatusCode} — {plainText}");
         }
 
-        var error = response?.Content?.DeserializeResponseContent<ErrorDto>();
-        if (response!.StatusCode == HttpStatusCode.InternalServerError || (error?.Error.Message?.Contains("Internal Server Error", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("InternalServerError", StringComparison.OrdinalIgnoreCase) ?? false))
+        var error = response.Content?.DeserializeResponseContent<ErrorDto>();
+        var errorMessages = new[] { "Internal Server Error", "InternalServerError", "Service Unavailable", "ServiceUnavailable" };
+        if (response.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable ||
+            errorMessages.Contains(error?.Error.Message, StringComparer.OrdinalIgnoreCase))
         {
-            return new PluginApplicationException("An internal server error occurred. Please implement a retry policy and try again.");
-        }
-
-        if (response!.StatusCode == HttpStatusCode.ServiceUnavailable || (error?.Error.Message?.Contains("Service Unavailable", StringComparison.OrdinalIgnoreCase) ?? false) || (error?.Error.Message?.Contains("ServiceUnavailable", StringComparison.OrdinalIgnoreCase) ?? false))
-        {
-            return new PluginApplicationException("Server service unavailable error occurred. Please implement a retry policy and try again.");
+            return new PluginApplicationException(
+                "Microsoft Graph is temporarily unavailable. Retries were exhausted. Please try again later");
         }
 
         return new PluginApplicationException($"{error?.Error.Code} - {error?.Error.Message}");
