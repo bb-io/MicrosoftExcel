@@ -21,6 +21,13 @@ public static class DrivePathResolver
             drivePath = "/me/drive";
         else
         {
+            if (string.IsNullOrWhiteSpace(workbookRequest.SiteName))
+            {
+                throw new PluginMisconfigurationException(
+                    "A SharePoint workbook is selected, but the site name isn't provided. " +
+                    "Please specify the site name");
+            }
+                
             string siteId = await GetSiteId(authHeader, workbookRequest.SiteName) ?? 
                             throw new PluginMisconfigurationException($"'{workbookRequest.SiteName}' site was not found");
 
