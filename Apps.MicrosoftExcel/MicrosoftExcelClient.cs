@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
 using System.Net;
 using System.Text.RegularExpressions;
+using Apps.MicrosoftExcel.Api.Interceptors;
 using Polly;
 using Polly.Retry;
 
@@ -14,6 +15,7 @@ public class MicrosoftExcelClient() : RestClient(new RestClientOptions
     ThrowOnAnyError = false,
     BaseUrl = new Uri("https://graph.microsoft.com/v1.0"),
     Timeout = TimeSpan.FromMilliseconds(200000),
+    Interceptors = [new DrivePathInterceptor()]
 })
 {
     private static readonly ResiliencePipeline<RestResponse> RetryPipeline = new ResiliencePipelineBuilder<RestResponse>()
