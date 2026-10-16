@@ -16,18 +16,12 @@ public static class DrivePathResolver
         if (Cache.TryGetValue(cacheKey, out string? drivePath))
             return drivePath;
         
-        bool isOneDriveWorkbook = await IsOneDriveWorkbook(workbookRequest.WorkbookId, authHeader);
-        if (isOneDriveWorkbook)
+        if (string.IsNullOrWhiteSpace(workbookRequest.SiteName))
+        {
             drivePath = "/me/drive";
+        }
         else
         {
-            if (string.IsNullOrWhiteSpace(workbookRequest.SiteName))
-            {
-                throw new PluginMisconfigurationException(
-                    "A SharePoint workbook is selected, but the site name isn't provided. " +
-                    "Please specify the site name");
-            }
-                
             string siteId = await GetSiteId(authHeader, workbookRequest.SiteName) ?? 
                             throw new PluginMisconfigurationException($"'{workbookRequest.SiteName}' site was not found");
 
@@ -65,16 +59,5 @@ public static class DrivePathResolver
         }
 
         return null;
-    }
-
-    private static async Task<bool> IsOneDriveWorkbook(string workbookId, string authHeader)
-    {
-        var client = new MicrosoftExcelClient();
-        var request = new RestRequest($"/me/drive/items/{workbookId}/workbook/worksheets")
-            .AddHeader("Authorization", authHeader)
-            .AddHeader("prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-
-        var response = await client.ExecuteAsync(request);
-        return response.IsSuccessStatusCode;
     }
 }
