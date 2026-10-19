@@ -51,7 +51,8 @@ public static class DrivePathResolver
             var request = new RestRequest(endpoint).AddHeader("Authorization", authHeader);
             var sites = await client.ExecuteWithHandling<ListWrapper<SiteDto>>(request);
 
-            string? siteId = sites.Value.FirstOrDefault(s => s.DisplayName == siteName || s.WebUrl == siteName)?.Id;
+            string? siteId = sites.Value.FirstOrDefault(s =>
+                s.Id == siteName || s.DisplayName == siteName || s.WebUrl == siteName)?.Id;
             if (!string.IsNullOrEmpty(siteId))
                 return siteId;
 
