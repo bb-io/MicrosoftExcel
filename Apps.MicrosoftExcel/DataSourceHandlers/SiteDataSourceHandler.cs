@@ -15,6 +15,8 @@ public class SiteDataSourceHandler(InvocationContext context)
         request.AddHeader("Authorization", token);
 
         var response = await Client.ExecuteWithHandling<ListWrapper<SiteDto>>(request);
-        return response.Value.Select(x => new DataSourceItem(x.DisplayName, x.DisplayName));
+        return response.Value
+            .DistinctBy(x => x.WebUrl ?? x.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(x => new DataSourceItem(x.WebUrl ?? x.Id, x.DisplayName));
     }
 }
