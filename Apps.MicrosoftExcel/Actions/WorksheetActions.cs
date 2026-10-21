@@ -153,6 +153,22 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
         return await ErrorHandler.ExecuteWithErrorHandlingAsync(() => Client.ExecuteWithHandling<WorksheetDto>(request));
     }
 
+    [Action("Delete worksheet", Description = "Delete a worksheet from a workbook")]
+    public async Task DeleteWorksheet(
+        [ActionParameter] WorkbookRequest workbookRequest,
+        [ActionParameter] WorksheetRequest worksheetRequest)
+    {
+        ValidateWorksheetParameter(worksheetRequest);
+
+        var request = new MicrosoftExcelRequest(
+            $"/items/{workbookRequest.WorkbookId}/workbook/worksheets/{worksheetRequest.Worksheet}",
+            Method.Delete,
+            InvocationContext.AuthenticationCredentialsProviders,
+            workbookRequest);
+
+        await Client.ExecuteWithHandling(request);
+    }
+
     [Action("Search worksheets", Description = "Search worksheets in a workbook")]
     public async Task<SearchWorksheetsDto> SearchWorksheets([ActionParameter] WorkbookRequest workbookRequest)
     {
