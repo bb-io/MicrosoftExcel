@@ -20,9 +20,6 @@ public class FolderDataSourceHandler(
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken ct)
     {
         var path = await GetFolderPathAsync(context);
-        var listPath = path.ToList();
-        listPath.RemoveAt(listPath.Count - 1);
-
-        return listPath;
+        return path.SkipLast(1);
     }
 }
