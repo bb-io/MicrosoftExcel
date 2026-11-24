@@ -132,7 +132,7 @@ public class WorksheetActions(InvocationContext invocationContext, IFileManageme
             Method.Patch, InvocationContext.AuthenticationCredentialsProviders, workbookRequest);
         request.AddJsonBody(new
         {
-            values = new[] { updateRowRequest.Row }
+            values = new[] { updateRowRequest.Row.ReplaceEmptyCellPlaceholders() }
         });
         var rowValue = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = rowValue.Values.First() };
