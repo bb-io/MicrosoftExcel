@@ -1,4 +1,5 @@
 ﻿using Apps.MicrosoftExcel.Dtos;
+using Apps.MicrosoftExcel.Extensions;
 using Apps.MicrosoftExcel.Models.Requests;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
@@ -52,7 +53,7 @@ public class TableActions(InvocationContext invocationContext) : MicrosoftExcelI
         {
             values = new[]
             {
-                updateTableRowRequest.Row
+                updateTableRowRequest.Row.ReplaceEmptyCellPlaceholders()
             }
         });
         var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
@@ -90,7 +91,7 @@ public class TableActions(InvocationContext invocationContext) : MicrosoftExcelI
         request.AddJsonBody(new
         {
             index = rowRequest.RowIndex,
-            values = new[] { updateRowRequest.Row }
+            values = new[] { updateRowRequest.Row.ReplaceEmptyCellPlaceholders() }
         });
         var result = await Client.ExecuteWithHandling<MultipleListWrapper<List<string>>>(request);
         return new RowDto() { Row = result.Values.First() };
